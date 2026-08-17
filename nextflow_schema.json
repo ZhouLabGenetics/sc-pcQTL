@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/joookerz/sc-pcQTL/main/nextflow_schema.json",
+  "$id": "https://raw.githubusercontent.com/ZhouLabGenetics/sc-pcQTL/main/nextflow_schema.json",
   "title": "sc-pcQTL parameters",
   "type": "object",
   "additionalProperties": false,
@@ -57,7 +57,7 @@
     "vr_prune_window": {"type": "integer", "minimum": 1, "default": 200},
     "vr_prune_step": {"type": "integer", "minimum": 1, "default": 50},
     "vr_prune_r2": {"type": "number", "minimum": 0, "maximum": 1, "default": 0.2},
-    "core_container": {"type": "string", "default": "ghcr.io/joookerz/sc-pcqtl-core:edge"},
-    "saige_container": {"type": "string", "default": "ghcr.io/joookerz/sc-pcqtl-saigeqtl:edge"}
+    "core_container": {"type": "string", "default": "ghcr.io/zhoulabgenetics/sc-pcqtl-core:edge"},
+    "saige_container": {"type": "string", "default": "ghcr.io/zhoulabgenetics/sc-pcqtl-saigeqtl:edge"}
   }
 }

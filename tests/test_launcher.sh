@@ -64,17 +64,17 @@ fi
 "$root/bin/sc-pcqtl" example --outdir example-output >/dev/null
 "$root/bin/sc-pcqtl" run --input samplesheet.csv >/dev/null
 
-grep -Fq 'run joookerz/sc-pcQTL -r main -profile docker,example --outdir example-output' "$SCPCQTL_TEST_CAPTURE"
-grep -Fq 'run joookerz/sc-pcQTL -r main -profile docker --input samplesheet.csv' "$SCPCQTL_TEST_CAPTURE"
+grep -Fq 'run ZhouLabGenetics/sc-pcQTL -r main -profile docker,example --outdir example-output' "$SCPCQTL_TEST_CAPTURE"
+grep -Fq 'run ZhouLabGenetics/sc-pcQTL -r main -profile docker --input samplesheet.csv' "$SCPCQTL_TEST_CAPTURE"
 
 export SCPCQTL_RUNTIME=podman
 "$root/bin/sc-pcqtl" run --input samplesheet.csv >/dev/null
-grep -Fq 'run joookerz/sc-pcQTL -r main -profile podman --input samplesheet.csv' "$SCPCQTL_TEST_CAPTURE"
+grep -Fq 'run ZhouLabGenetics/sc-pcQTL -r main -profile podman --input samplesheet.csv' "$SCPCQTL_TEST_CAPTURE"
 
 export SCPCQTL_RUNTIME=apptainer
 export SCPCQTL_EXTRA_PROFILES=slurm
 "$root/bin/sc-pcqtl" run --input samplesheet.csv >/dev/null
-grep -Fq 'run joookerz/sc-pcQTL -r main -profile apptainer,slurm --input samplesheet.csv' "$SCPCQTL_TEST_CAPTURE"
+grep -Fq 'run ZhouLabGenetics/sc-pcQTL -r main -profile apptainer,slurm --input samplesheet.csv' "$SCPCQTL_TEST_CAPTURE"
 
 export SCPCQTL_PIPELINE="$root"
 export SCPCQTL_RUNTIME=docker

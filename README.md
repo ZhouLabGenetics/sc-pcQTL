@@ -1,6 +1,6 @@
 # sc-pcQTL
 
-[![CI](https://github.com/joookerz/sc-pcQTL/actions/workflows/ci.yml/badge.svg)](https://github.com/joookerz/sc-pcQTL/actions/workflows/ci.yml)
+[![CI](https://github.com/ZhouLabGenetics/sc-pcQTL/actions/workflows/ci.yml/badge.svg)](https://github.com/ZhouLabGenetics/sc-pcQTL/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Nextflow](https://img.shields.io/badge/Nextflow-25.10.0%2B-23aa62.svg)](https://www.nextflow.io/)
 
@@ -43,7 +43,7 @@ recommended workstation runtime; Apptainer is recommended on Linux HPC. Then
 install the user-level launcher, pinned Nextflow, and Java 17 when needed:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joookerz/sc-pcQTL/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ZhouLabGenetics/sc-pcQTL/main/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 sc-pcqtl doctor
 ```

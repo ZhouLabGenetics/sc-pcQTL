@@ -2,7 +2,7 @@
 set -euo pipefail
 
 launcher_version='0.1.0-dev'
-pipeline=${SCPCQTL_PIPELINE:-joookerz/sc-pcQTL}
+pipeline=${SCPCQTL_PIPELINE:-ZhouLabGenetics/sc-pcQTL}
 revision=${SCPCQTL_REVISION:-main}
 nextflow_bin=${SCPCQTL_NEXTFLOW:-nextflow}
 

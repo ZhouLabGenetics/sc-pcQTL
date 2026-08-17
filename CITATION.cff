@@ -4,7 +4,7 @@ title: "sc-pcQTL"
 type: software
 version: 0.1.0-dev
 license: MIT
-repository-code: "https://github.com/joookerz/sc-pcQTL"
+repository-code: "https://github.com/ZhouLabGenetics/sc-pcQTL"
 authors:
   - family-names: Zhang
     given-names: Junkai

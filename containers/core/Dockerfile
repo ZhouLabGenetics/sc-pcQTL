@@ -1,6 +1,6 @@
 FROM rocker/r-ver:4.5.1@sha256:55be3ae296dd21b6f2da705be44804ba7eb2ab2233a7050730506d7e64e8feda
 
-LABEL org.opencontainers.image.source="https://github.com/joookerz/sc-pcQTL"
+LABEL org.opencontainers.image.source="https://github.com/ZhouLabGenetics/sc-pcQTL"
 LABEL org.opencontainers.image.description="Core R environment for sc-pcQTL"
 
 ARG CRAN_REPO=https://packagemanager.posit.co/cran/2026-08-14

@@ -4,7 +4,7 @@ set -euo pipefail
 nextflow_version=${NEXTFLOW_VERSION:-25.10.7}
 install_root=${SCPCQTL_INSTALL_ROOT:-"$HOME/.local/share/sc-pcqtl"}
 bin_dir=${SCPCQTL_BIN_DIR:-"$HOME/.local/bin"}
-launcher_url=${SCPCQTL_LAUNCHER_URL:-https://raw.githubusercontent.com/joookerz/sc-pcQTL/main/bin/sc-pcqtl}
+launcher_url=${SCPCQTL_LAUNCHER_URL:-https://raw.githubusercontent.com/ZhouLabGenetics/sc-pcQTL/main/bin/sc-pcqtl}
 
 usage() {
   cat <<'EOF'

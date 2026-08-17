@@ -30,7 +30,7 @@ jobs:
       - uses: docker/metadata-action@v5
         id: meta
         with:
-          images: ghcr.io/joookerz/sc-pcqtl-${{ matrix.image }}
+          images: ghcr.io/zhoulabgenetics/sc-pcqtl-${{ matrix.image }}
           tags: |
             type=raw,value=edge,enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}}
@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           version=${GITHUB_REF_NAME#v}
-          echo "uri=ghcr.io/joookerz/sc-pcqtl-${{ matrix.image }}:${version}" >> "$GITHUB_OUTPUT"
+          echo "uri=ghcr.io/zhoulabgenetics/sc-pcqtl-${{ matrix.image }}:${version}" >> "$GITHUB_OUTPUT"
       - name: Anonymous image pull
         run: |
           docker logout ghcr.io >/dev/null 2>&1 || true
@@ -97,8 +97,8 @@ jobs:
         run: |
           version=${GITHUB_REF_NAME#v}
           nextflow run . -profile docker,example -ansi-log false \
-            --core_container "ghcr.io/joookerz/sc-pcqtl-core:${version}" \
-            --saige_container "ghcr.io/joookerz/sc-pcqtl-saigeqtl:${version}" \
+            --core_container "ghcr.io/zhoulabgenetics/sc-pcqtl-core:${version}" \
+            --saige_container "ghcr.io/zhoulabgenetics/sc-pcqtl-saigeqtl:${version}" \
             --outdir results/release-example
           test -s results/release-example/pipeline_info/execution_trace.txt
           test -s results/release-example/summary/significant_pcqtl_phenotypes.tsv

@@ -40,7 +40,7 @@ Core options:
   --saige_params PATH        Optional step,parameter,value override table
   --outdir PATH              Output directory (default: results)
 
-Documentation: https://github.com/joookerz/sc-pcQTL
+Documentation: https://github.com/ZhouLabGenetics/sc-pcQTL
 '''.stripIndent()
 }
 

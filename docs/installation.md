@@ -15,7 +15,7 @@ current analysis images are `linux/amd64`.
 Install and start a container runtime first, then run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joookerz/sc-pcQTL/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ZhouLabGenetics/sc-pcQTL/main/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 sc-pcqtl doctor
 sc-pcqtl doctor --deep
@@ -36,7 +36,7 @@ While the repository is private, collaborators should install from an
 authenticated clone instead of the public `curl` command:
 
 ```bash
-git clone git@github.com:joookerz/sc-pcQTL.git
+git clone git@github.com:ZhouLabGenetics/sc-pcQTL.git
 cd sc-pcQTL
 bash install.sh
 ```
@@ -168,8 +168,8 @@ for supported Java and shell requirements.
 The default `edge` images are built from the repository's `main` branch:
 
 ```text
-ghcr.io/joookerz/sc-pcqtl-core:edge
-ghcr.io/joookerz/sc-pcqtl-saigeqtl:edge
+ghcr.io/zhoulabgenetics/sc-pcqtl-core:edge
+ghcr.io/zhoulabgenetics/sc-pcqtl-saigeqtl:edge
 ```
 
 For a released analysis, run a tagged workflow revision and its matching
@@ -199,7 +199,7 @@ conda activate sc-pcqtl-launcher
 ## Clone for development
 
 ```bash
-git clone https://github.com/joookerz/sc-pcQTL.git
+git clone https://github.com/ZhouLabGenetics/sc-pcQTL.git
 cd sc-pcQTL
 nextflow run . --help
 ```

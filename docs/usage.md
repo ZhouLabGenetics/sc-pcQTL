@@ -118,32 +118,32 @@ SCPCQTL_EXTRA_PROFILES=slurm sc-pcqtl run -c institutional.config [parameters]
 Bundled example with Apptainer:
 
 ```bash
-nextflow run joookerz/sc-pcQTL -profile apptainer,example \
+nextflow run ZhouLabGenetics/sc-pcQTL -profile apptainer,example \
   --outdir results/example
 ```
 
 Docker workstation:
 
 ```bash
-nextflow run joookerz/sc-pcQTL -profile docker [parameters]
+nextflow run ZhouLabGenetics/sc-pcQTL -profile docker [parameters]
 ```
 
 Podman workstation:
 
 ```bash
-nextflow run joookerz/sc-pcQTL -profile podman [parameters]
+nextflow run ZhouLabGenetics/sc-pcQTL -profile podman [parameters]
 ```
 
 Slurm with Apptainer:
 
 ```bash
-nextflow run joookerz/sc-pcQTL -profile apptainer,slurm [parameters]
+nextflow run ZhouLabGenetics/sc-pcQTL -profile apptainer,slurm [parameters]
 ```
 
 SGE/UGE with Apptainer:
 
 ```bash
-nextflow run joookerz/sc-pcQTL -profile apptainer,sge \
+nextflow run ZhouLabGenetics/sc-pcQTL -profile apptainer,sge \
   -c institutional.config [parameters]
 ```
 
@@ -151,7 +151,7 @@ Add `-resume` after an interruption. Site-specific resources, queues, and
 container cache paths belong in a separate Nextflow config:
 
 ```bash
-nextflow run joookerz/sc-pcQTL -profile apptainer,slurm \
+nextflow run ZhouLabGenetics/sc-pcQTL -profile apptainer,slurm \
   -c institutional.config [parameters]
 ```
 
