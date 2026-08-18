@@ -100,23 +100,10 @@ one explicitly. Run `sc-pcqtl run --help` for a concise workflow summary.
 Direct `nextflow run` commands remain supported for advanced and institutional
 deployments.
 
-## Run the complete workflow step by step
-
-The complete analysis can be submitted as six independently resumable stages:
-
-1. `sc-pcqtl upstream step1`: prepare inputs and test gene pairs;
-2. `sc-pcqtl upstream step2`: call local co-expression clusters;
-3. `sc-pcqtl upstream step3`: construct cluster-PC phenotypes;
-4. `sc-pcqtl saige step1`: fit SAIGE-QTL null models;
-5. `sc-pcqtl saige step2`: run regional association tests; and
-6. `sc-pcqtl saige step3`: calculate regional results and final summaries.
-
-See the [complete example commands](examples/README.md#run-the-complete-workflow-step-by-step).
-For production datasets, manifest interfaces, scheduler configuration,
-concurrency limits, recovery, and large-cohort batch patterns are documented
-in [large-scale and HPC execution](docs/large-scale.md). SAIGE-QTL parameter
-customization and advanced stage behavior are described in the
-[SAIGE-QTL guide](docs/saigeqtl.md).
+`sc-pcqtl run` is the recommended interface and executes the complete workflow
+with internal parallelism. Advanced users who require separate scheduler
+allocations or manifest checkpoints should use the distinctly documented
+[large-scale and staged execution guide](docs/large-scale.md).
 
 ## Statistical Modes
 
@@ -137,13 +124,12 @@ within-chromosome autosomal pairs among filtered genes.
 
 - [Installation](docs/installation.md)
 - [Inputs and execution](docs/usage.md)
-- [Complete step-by-step example](examples/README.md#run-the-complete-workflow-step-by-step)
-- [Large-scale and HPC batch execution](docs/large-scale.md)
 - [Parameters](docs/parameters.md)
 - [Method definitions](docs/methods.md)
 - [SAIGE-QTL execution and customization](docs/saigeqtl.md)
 - [Outputs](docs/outputs.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Advanced: large-scale and staged execution](docs/large-scale.md)
 
 ## Citation
 

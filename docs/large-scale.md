@@ -1,22 +1,19 @@
-# Large-scale and HPC batch execution
+# Advanced: large-scale and staged execution
 
-sc-pcQTL uses Nextflow to submit independent units of work concurrently. The
-default `sc-pcqtl run` command is already parallel: cell types, gene-pair
-chunks, cluster PCA tasks, and cluster-PC QTL phenotypes are scheduled as soon
-as their inputs are available. Users should not launch one workflow per gene
-pair or phenotype.
+This guide is for advanced users deploying sc-pcQTL on an HPC scheduler or
+requiring explicit manifest checkpoints. Most users should use the standard
+`sc-pcqtl run` command documented in [Inputs and execution](usage.md).
 
-For particularly large expression and QTL scans, the recommended execution
-model is:
+The standard command is already parallel: cell types, gene-pair chunks,
+cluster PCA tasks, and cluster-PC QTL phenotypes are scheduled as soon as their
+inputs are available. Users should not launch one workflow per gene pair or
+phenotype. On HPC, first try the complete workflow in one submission. Use the
+six-stage mode only when scheduler wall-time policies, allocation boundaries,
+or operational checkpoint requirements make one long-lived driver unsuitable.
 
-1. Run preparation plus pair testing as upstream Step 1.
-2. Run cluster calling as upstream Step 2.
-3. Run cluster-PC phenotype construction as upstream Step 3.
-4. Run SAIGE-QTL Step 1, Step 2, and Step 3 as separate submissions.
-5. Allow Nextflow to parallelize all work units within each submission.
-
-The upstream and QTL stages are sequential because each consumes the manifest
-written by the preceding stage. Tasks within each submission remain parallel.
+The complete and staged modes use the same statistical settings and produce
+the same final result tables. They differ only in orchestration and publication
+of intermediate files.
 
 ## Parallel units
 
@@ -26,7 +23,7 @@ written by the preceding stage. Tasks within each submission remain parallel.
 | Hurdle association screen | Cell type and response-gene chunk | `process_pair` |
 | Cluster calling | Cell type | `process_medium` |
 | Cluster PCA | Cell type | `process_pca` |
-| SAIGE-QTL Steps 1-3 | Cluster-PC phenotype | `process_qtl` |
+| SAIGE-QTL association | Cluster-PC phenotype | `process_qtl` |
 | Final QTL aggregation | One workflow-wide task | `process_medium` |
 
 The final manifest and summary processes start only after all required upstream
@@ -134,7 +131,7 @@ applicable limit controls effective concurrency. The default SAIGE-QTL tasks
 request one CPU; allocating additional CPUs does not by itself make the pinned
 SAIGE-QTL commands faster.
 
-## Option 1: complete workflow in one submission
+## Recommended: complete workflow in one submission
 
 The single-command mode is suitable when the scheduler permits a long-lived
 Nextflow driver and the complete analysis can share one resource policy:
@@ -160,11 +157,13 @@ analysis serially inside the launcher. Depending on local policy, run the
 Nextflow driver on a login node, a workflow node, or within a modest scheduler
 allocation that remains active until the workflow finishes.
 
-## Option 2: three upstream plus three QTL submissions
+## Optional: six staged submissions
 
-This mode provides explicit checkpoints and is recommended when the QTL scan
-contains many cluster-PC phenotypes or scheduler wall-time limits make one
-long-lived submission inconvenient.
+This advanced mode divides the workflow into three upstream and three QTL
+submissions. Use it only when explicit checkpoints or scheduler wall-time
+limits make one long-lived submission inconvenient. The six drivers are
+sequential because each consumes the manifest written by the preceding stage;
+tasks within each driver remain parallel.
 
 ### A. Prepare inputs and run pair tests
 
@@ -292,7 +291,7 @@ has completed successfully.
 QTL manifest schemas and SAIGE-QTL parameter ownership are documented in
 [SAIGE-QTL execution and customization](saigeqtl.md).
 
-## Scheduler submission pattern
+## Staged scheduler dependency pattern
 
 Each command above is a Nextflow driver, not an individual task. If a site
 requires the driver itself to run through Slurm, place one command in a small
@@ -336,8 +335,8 @@ throttling.
 ### Storage
 
 Upstream Step 1 publishes prepared expression blocks needed by Steps 2 and 3.
-Standalone SAIGE-QTL stages publish null models and other intermediates needed
-by later stages. Estimate both from a pilot subset before launching the full
+Advanced SAIGE-QTL stages publish null models and other intermediates needed by
+later stages. Estimate both from a pilot subset before launching the full
 analysis. Keep the Nextflow work directories until analysis and QC are
 finished; `nextflow clean` removes cached files required by `-resume`.
 
@@ -395,7 +394,7 @@ They would overwrite stage manifests and provenance reports even when their
 task identifiers differ. Automatic manifest splitting and cross-shard summary
 merging are not currently launcher commands.
 
-## Completion checks
+## Staged completion checks
 
 For a successful staged analysis:
 

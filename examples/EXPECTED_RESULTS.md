@@ -42,7 +42,3 @@ With `--pair_test joint_score`, the expected workflow-level counts are also:
 
 Minor floating-point differences in SAIGE-QTL p-values can occur across CPU
 and BLAS implementations without changing these checks.
-
-Running the same generated `qtl_tasks.tsv` through `sc-pcqtl saige step1`,
-`step2`, and `step3` produces the same 12 tested and six significant
-cluster-PC phenotypes as the end-to-end command.

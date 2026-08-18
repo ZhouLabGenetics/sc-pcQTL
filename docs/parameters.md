@@ -55,7 +55,7 @@ columns present in the input, and list the categorical subset in
 donor covariates are required. Library size is configured separately and is
 still modeled.
 
-## Execution and advanced parameters
+## Standard execution parameters
 
 | Parameter | Default | Meaning |
 |---|---:|---|
@@ -63,13 +63,8 @@ still modeled.
 | `run_qtl` | `true` | Run SAIGE-QTL after phenotype construction |
 | `saige_params` | unset | Custom SAIGE-QTL parameter table |
 | `variance_ratio_prefix` | unset | Existing variance-ratio PLINK marker prefix |
-| `qtl_manifest` | unset | Global phenotype task manifest for standalone step 1 |
-| `step1_manifest` | unset | Completed null-model manifest for standalone step 2 |
-| `step2_manifest` | unset | Completed association manifest for standalone step 3 |
-| `upstream_step1_manifest` | unset | Completed preparation/pair manifest for upstream step 2 |
-| `upstream_step2_manifest` | unset | Completed cluster manifest for upstream step 3 |
 | `save_directional_tests` | `false` | Publish all directional pair-test records |
-| `count_block_size` | 100 | Internal genes per staged expression block |
+| `count_block_size` | 100 | Genes per prepared expression block |
 | `pair_responses_per_task` | 10 | Response genes per pair task in either scheduling mode |
 | `vr_n_markers` | 10000 | Maximum auto-selected variance-ratio markers |
 | `vr_seed` | 1 | Deterministic marker-selection seed |
@@ -77,6 +72,11 @@ still modeled.
 | `vr_prune_window` | 200 | PLINK LD-pruning window |
 | `vr_prune_step` | 50 | PLINK LD-pruning step |
 | `vr_prune_r2` | 0.2 | PLINK LD-pruning r-squared threshold |
+
+## Example-only parameters
+
+| Parameter | Default | Meaning |
+|---|---:|---|
 | `example_pair_max_forks` | 2 | Concurrent pair tasks in the bundled example only |
 | `example_qtl_max_forks` | 1 | Concurrent QTL tasks in the bundled example only |
 
@@ -84,8 +84,22 @@ Use a custom Nextflow config to override process memory, time, CPU, queue, or
 executor settings. Statistical parameters should be passed on the command
 line or in a Nextflow parameter file.
 
+## Advanced staged-execution parameters
+
+These manifest parameters are not used by the standard `sc-pcqtl run`
+command. They are inputs to the advanced stage subcommands documented in the
+[large-scale and staged execution guide](large-scale.md).
+
+| Parameter | Default | Advanced use |
+|---|---:|---|
+| `qtl_manifest` | unset | Cluster-PC task manifest for SAIGE-QTL Step 1 |
+| `step1_manifest` | unset | Completed null-model manifest for SAIGE-QTL Step 2 |
+| `step2_manifest` | unset | Completed association manifest for SAIGE-QTL Step 3 |
+| `upstream_step1_manifest` | unset | Completed preparation/pair manifest for upstream Step 2 |
+| `upstream_step2_manifest` | unset | Completed cluster manifest for upstream Step 3 |
+
 The launcher manages internal stage-selection and intermediate-publication
 parameters. Users should invoke staged runs through `sc-pcqtl upstream` or
 `sc-pcqtl saige`, rather than setting those internal parameters directly. See
-[large-scale and HPC execution](large-scale.md) and
+[advanced large-scale and staged execution](large-scale.md) and
 [SAIGE-QTL execution](saigeqtl.md).

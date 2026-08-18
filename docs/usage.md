@@ -84,10 +84,9 @@ resolve to BED, BIM, and FAM files for chromosomes 1 through 22, for example:
 ```
 
 Donor IDs in the phenotype table must map to genotype sample IDs. Extra
-genotype samples are allowed. Use `--run_qtl false` to stop after cluster-PC
-phenotype construction; genotype input is then optional. This mode still
-writes the global `phenotypes/qtl_tasks.tsv` manifest required by standalone
-SAIGE-QTL execution.
+genotype samples are allowed. Users who only need cluster-PC phenotypes can set
+`--run_qtl false`; genotype input is then optional and association testing is
+skipped.
 
 ## Variance-ratio markers
 
@@ -97,19 +96,30 @@ files, filters and LD-prunes variants, and deterministically selects at most
 10,000 markers. The generated PLINK files and SHA256 checksums are published
 under `pipeline_info/variance_ratio/`.
 
-## Execution profiles
+## Standard execution
 
 The installed launcher selects a supported runtime automatically:
 
 ```bash
 sc-pcqtl doctor
 sc-pcqtl example --outdir results/example
-sc-pcqtl run [parameters]
+sc-pcqtl run \
+  --input samplesheet.csv \
+  --gene_annotation genes.tsv \
+  --genotype_prefix '/data/genotype_chr{chr}' \
+  --outdir results/analysis \
+  -resume
 ```
 
 Set `SCPCQTL_RUNTIME=docker`, `podman`, `apptainer`, or `singularity` to
-override automatic selection. Advanced users can call Nextflow directly as
-shown below.
+override automatic selection. The `sc-pcqtl run` command executes the complete
+workflow and internally parallelizes cell types, pair-test chunks, cluster
+phenotypes, and QTL tasks.
+
+## Advanced runtime and scheduler configuration
+
+The settings in this section change how the complete workflow is launched;
+they do not split it into manual stages.
 
 On Slurm, append the executor profile without changing the runtime selection:
 
@@ -159,16 +169,8 @@ nextflow run ZhouLabGenetics/sc-pcQTL -profile apptainer,slurm \
 
 Do not edit the workflow's committed profiles for a single installation.
 
-For large expression inputs, `sc-pcqtl upstream step1`, `step2`, and `step3`
-separate preparation plus pair testing, cluster calling, and cluster-PC
-phenotype construction. Each stage retains Nextflow-native parallelism and
-writes the manifest consumed by the next stage.
-
-For large QTL scans, `sc-pcqtl saige step1`, `step2`, and `step3` similarly
-divide SAIGE-QTL work into three manifest-driven runs without changing the
-statistical settings or final output tables. Complete commands and the external
-phenotype manifest schema are provided in [SAIGE-QTL execution](saigeqtl.md).
-Resource profiles, scheduler submission patterns, concurrency controls, and
-recovery procedures are covered in the dedicated
-[large-scale and HPC batch guide](large-scale.md). A complete six-stage example
-is also provided in the [example documentation](../examples/README.md#run-the-complete-workflow-step-by-step).
+Manifest-driven step-by-step execution is a separate advanced mode intended
+for unusually large analyses or scheduler policies that cannot accommodate a
+single Nextflow driver. Its commands, dependencies, resource controls, and
+recovery procedures are documented only in the
+[advanced large-scale and staged execution guide](large-scale.md).

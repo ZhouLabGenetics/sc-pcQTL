@@ -14,12 +14,16 @@ Usage:
   sc-pcqtl doctor [--deep]
   sc-pcqtl example [Nextflow options]
   sc-pcqtl run [pipeline parameters]
+
+Advanced staged execution:
   sc-pcqtl upstream step1 [parameters]
   sc-pcqtl upstream step2 [parameters]
   sc-pcqtl upstream step3 [parameters]
   sc-pcqtl saige step1 [parameters]
   sc-pcqtl saige step2 [parameters]
   sc-pcqtl saige step3 [parameters]
+
+Advanced direct execution:
   sc-pcqtl nextflow [Nextflow arguments]
   sc-pcqtl version
 
@@ -35,7 +39,7 @@ EOF
 
 upstream_usage() {
   cat <<'EOF'
-Run the upstream analysis as three independently resumable batch stages:
+Advanced: run the upstream analysis as three independently resumable stages:
 
   sc-pcqtl upstream step1 --input PATH --gene_annotation PATH
   sc-pcqtl upstream step2 --upstream_step1_manifest PATH
@@ -44,14 +48,14 @@ Run the upstream analysis as three independently resumable batch stages:
 Step 1 prepares each cell type and runs the parallel hurdle pair screen. Step 2
 calls local gene clusters. Step 3 constructs cluster-PC phenotypes and writes
 the standard phenotypes/qtl_tasks.tsv manifest. All stages accept --outdir and
-ordinary Nextflow options. See the complete example in examples/README.md and
-the production guidance in docs/large-scale.md.
+ordinary Nextflow options. See docs/large-scale.md for the complete staged
+workflow and production guidance.
 EOF
 }
 
 saige_usage() {
   cat <<'EOF'
-Run SAIGE-QTL as independently resumable batch stages:
+Advanced: run SAIGE-QTL as independently resumable batch stages:
 
   sc-pcqtl saige step1 --qtl_manifest PATH [genotype/variance-ratio options]
   sc-pcqtl saige step2 --step1_manifest PATH --genotype_prefix PREFIX

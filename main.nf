@@ -74,9 +74,8 @@ Core options:
   --saige_params PATH        Optional step,parameter,value override table
   --outdir PATH              Output directory (default: results)
 
-The complete workflow can be run as six independent manifest-driven stages:
-sc-pcqtl upstream step1, step2, and step3, followed by sc-pcqtl saige step1,
-step2, and step3.
+The standard interface runs the complete workflow in one command. Advanced
+manifest-driven and HPC execution is documented in docs/large-scale.md.
 
 Documentation: https://github.com/ZhouLabGenetics/sc-pcQTL
 '''.stripIndent()

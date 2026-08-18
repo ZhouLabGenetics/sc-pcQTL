@@ -63,9 +63,8 @@ the recommended interface when separate scheduler allocations are not needed.
 
 For Slurm resource configuration, concurrency limits, scheduler chaining,
 monitoring, and recovery, see the
-[large-scale and HPC batch guide](large-scale.md). A complete upstream-to-QTL
-staged example is provided in the
-[example documentation](../examples/README.md#run-the-complete-workflow-step-by-step).
+[advanced large-scale and staged execution guide](large-scale.md), which is
+the authoritative source for the complete six-stage command sequence.
 
 First construct cluster-PC phenotypes without running QTL association tests:
 
@@ -199,6 +198,7 @@ step3_gene_pvalue_qtl.R \
   --genePval_outputFile=native_saige/sim_immune__SC_chr22_cluster_001__PC1/acat.tsv
 ```
 
-These commands are shown for transparency. The staged sc-pcQTL interface is
-preferred because it validates manifests, sample ordering, region chromosome,
-parameter ownership, and completion files.
+These commands are shown for transparency. Use `sc-pcqtl run` for routine
+analysis. If separate batch stages are required, the staged sc-pcQTL interface
+is preferred over native commands because it validates manifests, sample
+ordering, region chromosome, parameter ownership, and completion files.
