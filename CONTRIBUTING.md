@@ -11,6 +11,7 @@ nextflow lint main.nf
 Rscript tests/testthat.R
 tests/run_core_integration.sh
 tests/run_qtl_mock_integration.sh
+tests/run_qtl_staged_mock_integration.sh
 ```
 
 Manual edits should not mix scientific-default changes with refactoring in a

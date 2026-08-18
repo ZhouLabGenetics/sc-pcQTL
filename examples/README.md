@@ -81,3 +81,37 @@ storage, and emulation.
 
 The maintainer-only data generator is isolated under `dev/example-data/` and
 is not called during a normal workflow run.
+
+## Run SAIGE-QTL as three stages
+
+The bundled data can also exercise the independently resumable SAIGE-QTL
+interface. From a cloned repository, use these exact commands:
+
+```bash
+SCPCQTL_PIPELINE="$PWD" sc-pcqtl example \
+  --run_qtl false \
+  --outdir results/example_staged
+```
+
+```bash
+SCPCQTL_PIPELINE="$PWD" sc-pcqtl saige step1 \
+  --qtl_manifest results/example_staged/phenotypes/qtl_tasks.tsv \
+  --variance_ratio_prefix "$PWD/examples/variance_ratio" \
+  --outdir results/example_staged
+```
+
+```bash
+SCPCQTL_PIPELINE="$PWD" sc-pcqtl saige step2 \
+  --step1_manifest results/example_staged/qtl/manifests/step1.tsv \
+  --genotype_prefix "$PWD/examples/genotype_chr{chr}" \
+  --outdir results/example_staged
+```
+
+```bash
+SCPCQTL_PIPELINE="$PWD" sc-pcqtl saige step3 \
+  --step2_manifest results/example_staged/qtl/manifests/step2.tsv \
+  --outdir results/example_staged
+```
+
+The resulting `summary/` tables are the same as those from the single
+end-to-end example command.

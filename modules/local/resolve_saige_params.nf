@@ -1,7 +1,8 @@
 process RESOLVE_SAIGE_PARAMS {
     tag 'SAIGE-QTL parameters'
     label 'process_low'
-    publishDir "${params.outdir}/pipeline_info", mode: 'copy', overwrite: true
+    publishDir "${params.outdir}/pipeline_info${params.execution_name ? '/' + params.execution_name : ''}",
+        mode: 'copy', overwrite: true
 
     input:
     path defaults

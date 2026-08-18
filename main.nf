@@ -1,21 +1,38 @@
 #!/usr/bin/env nextflow
 
-include { PREPARE_CELLTYPE }      from './modules/local/prepare_celltype'
-include { RESOLVE_SAIGE_PARAMS }  from './modules/local/resolve_saige_params'
-include { PLAN_PAIR_TASKS }       from './modules/local/plan_pair_tasks'
-include { RUN_PAIR_TASK }         from './modules/local/run_pair_task'
-include { MERGE_PAIR_TASKS }      from './modules/local/merge_pair_tasks'
-include { CALL_CLUSTERS }         from './modules/local/call_clusters'
-include { RUN_CLUSTER_PCA }       from './modules/local/run_cluster_pca'
-include { BUILD_VARIANCE_RATIO }  from './modules/local/build_variance_ratio'
-include { RUN_SAIGE_QTL }         from './modules/local/run_saige_qtl'
-include { COLLECT_QTL_RESULTS }    from './modules/local/collect_qtl_results'
-include { WRITE_RUN_METADATA }     from './modules/local/write_run_metadata'
-include { VALIDATE_SAMPLESHEET }   from './modules/local/validate_samplesheet'
+include { PREPARE_CELLTYPE }              from './modules/local/prepare_celltype'
+include { RESOLVE_SAIGE_PARAMS }          from './modules/local/resolve_saige_params'
+include { PLAN_PAIR_TASKS }               from './modules/local/plan_pair_tasks'
+include { RUN_PAIR_TASK }                 from './modules/local/run_pair_task'
+include { MERGE_PAIR_TASKS }              from './modules/local/merge_pair_tasks'
+include { CALL_CLUSTERS }                 from './modules/local/call_clusters'
+include { RUN_CLUSTER_PCA }               from './modules/local/run_cluster_pca'
+include { COLLECT_QTL_TASKS }             from './modules/local/collect_qtl_tasks'
+include { BUILD_VARIANCE_RATIO }          from './modules/local/build_variance_ratio'
+include { RUN_SAIGE_STEP1 }               from './modules/local/run_saige_step1'
+include { RUN_SAIGE_STEP2 }               from './modules/local/run_saige_step2'
+include { RUN_SAIGE_STEP3 }               from './modules/local/run_saige_step3'
+include { WRITE_SAIGE_STAGE_MANIFEST }    from './modules/local/write_saige_stage_manifest'
+include { COLLECT_QTL_RESULTS }           from './modules/local/collect_qtl_results'
+include { WRITE_RUN_METADATA }            from './modules/local/write_run_metadata'
+include { VALIDATE_SAMPLESHEET }          from './modules/local/validate_samplesheet'
 
 def requireParam(name, value) {
     if (value == null || value.toString().trim() == '') {
         error "Missing required parameter --${name}"
+    }
+}
+
+def requireGenotypePrefix(value) {
+    requireParam('genotype_prefix', value)
+    if (!value.toString().contains('{chr}')) {
+        error '--genotype_prefix must contain the {chr} placeholder'
+    }
+}
+
+def requireStageExecution(stageName) {
+    if (params.execution_name != stageName || !params.publish_saige_intermediates) {
+        error "${stageName} must set --execution_name ${stageName} and --publish_saige_intermediates true; use sc-pcqtl saige"
     }
 }
 
@@ -36,9 +53,12 @@ Execution:
 Core options:
   --pair_scope fast|complete
   --pair_test component_union|joint_score
-  --covariates LIST         Comma-separated donor covariates; may be empty
+  --covariates LIST          Comma-separated donor covariates; may be empty
   --saige_params PATH        Optional step,parameter,value override table
   --outdir PATH              Output directory (default: results)
+
+SAIGE-QTL can also be run as three independent manifest-driven stages with
+sc-pcqtl saige step1, step2, and step3.
 
 Documentation: https://github.com/ZhouLabGenetics/sc-pcQTL
 '''.stripIndent()
@@ -57,7 +77,7 @@ def parseTaskTable(taskFile, celltype) {
     }
 }
 
-def parseQtlTable(pcaDir, celltype) {
+def parsePcaQtlTable(pcaDir, celltype, publishedPhenotypeRoot) {
     def taskFile = pcaDir.resolve('qtl_tasks.tsv')
     def lines = taskFile.readLines()
     if (lines.size() <= 1) return []
@@ -65,10 +85,243 @@ def parseQtlTable(pcaDir, celltype) {
     lines.drop(1).findAll { line -> line.trim() }.collect { line ->
         def values = line.split('\t', -1)
         def row = [header, values].transpose().collectEntries()
-        tuple(celltype, row.task_id as Integer, row.cluster_id, row.phenotype_id,
-              row.chromosome as Integer, pcaDir.resolve(row.phenotype_file),
-              pcaDir.resolve(row.region_file))
+        def taskId = "${celltype}__${row.cluster_id}__${row.phenotype_id}"
+        def phenotypeSource = new File(publishedPhenotypeRoot, "${celltype}/${row.phenotype_file}").absolutePath
+        def regionSource = new File(publishedPhenotypeRoot, "${celltype}/${row.region_file}").absolutePath
+        tuple(taskId, celltype, row.cluster_id, row.phenotype_id,
+              row.chromosome as Integer, phenotypeSource, regionSource,
+              pcaDir.resolve(row.phenotype_file), pcaDir.resolve(row.region_file))
     }
+}
+
+def openTextReader(path) {
+    def stream = java.nio.file.Files.newInputStream(path)
+    if (path.toString().toLowerCase().endsWith('.gz')) {
+        stream = new java.util.zip.GZIPInputStream(stream)
+    }
+    new java.io.BufferedReader(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8))
+}
+
+def resolveManifestPath(manifestFile, rawValue, column, rowNumber) {
+    def value = rawValue?.toString()?.trim()
+    if (!value) error "Manifest row ${rowNumber} has an empty ${column}"
+    if (value.contains('\t') || value.contains('\n') || value.contains('\r')) {
+        error "Manifest row ${rowNumber} has an invalid ${column} path"
+    }
+    def path = java.nio.file.Paths.get(value)
+    if (!path.isAbsolute()) path = manifestFile.parent.resolve(path)
+    path = path.toAbsolutePath().normalize()
+    if (!java.nio.file.Files.isRegularFile(path) || java.nio.file.Files.size(path) == 0L) {
+        error "Manifest row ${rowNumber} references a missing or empty ${column}: ${path}"
+    }
+    path.toString()
+}
+
+def validatePhenotypeFile(pathString, phenotypeId, rowNumber) {
+    def path = java.nio.file.Paths.get(pathString)
+    def reader = openTextReader(path)
+    def headerLine = reader.readLine()
+    reader.close()
+    if (headerLine == null) error "Manifest row ${rowNumber} has an empty phenotype table: ${path}"
+    def header = headerLine.replaceAll('\\r$', '').split('\t', -1) as List
+    if (!header.contains('individual') || !header.contains(phenotypeId)) {
+        error "Manifest row ${rowNumber} phenotype table must contain individual and ${phenotypeId}: ${path}"
+    }
+}
+
+def validateRegionFile(pathString, chromosome, rowNumber) {
+    def path = java.nio.file.Paths.get(pathString)
+    def reader = openTextReader(path)
+    def lines = reader.readLines()
+    reader.close()
+    def fields = null
+    lines.each { rawLine ->
+        def line = rawLine.replaceAll('\\r$', '').trim()
+        def candidate = line ? line.split('\t', -1) : []
+        if (fields == null && candidate.size() >= 3 && candidate[0].replaceFirst('^chr', '') ==~ /[0-9]+/) {
+            fields = candidate
+        }
+    }
+    if (fields == null) error "Manifest row ${rowNumber} has no valid chromosome/start/end record: ${path}"
+    def regionChromosome = fields[0].replaceFirst('^chr', '')
+    if (regionChromosome.toInteger() != chromosome) {
+        error "Manifest row ${rowNumber} region chromosome ${regionChromosome} does not match ${chromosome}: ${path}"
+    }
+    if (!(fields[1] ==~ /[0-9]+/) || !(fields[2] ==~ /[0-9]+/) ||
+        fields[1].toLong() > fields[2].toLong()) {
+        error "Manifest row ${rowNumber} has invalid region coordinates: ${path}"
+    }
+}
+
+def parseSaigeManifest(manifestInput, stage) {
+    def manifestFile = manifestInput.toAbsolutePath().normalize()
+    def lines = manifestFile.readLines().findAll { line -> line.trim() }
+    if (lines.size() < 2) error "${stage} manifest must contain a header and at least one task: ${manifestFile}"
+    def header = lines[0].replaceAll('\\r$', '').split('\t', -1) as List
+    if (header.size() != header.unique().size()) error "${stage} manifest has duplicate column names"
+
+    def baseColumns = ['task_id', 'celltype', 'cluster_id', 'phenotype_id', 'chromosome',
+                       'phenotype_file', 'region_file']
+    def stageColumns = [
+        qtl: [],
+        step1: ['null_model_file', 'variance_ratio_file', 'variance_ratio_fam_file', 'saige_params_file'],
+        step2: ['association_file', 'saige_params_file']
+    ]
+    if (!stageColumns.containsKey(stage)) error "Unsupported SAIGE manifest type: ${stage}"
+    def required = baseColumns + stageColumns[stage]
+    def missing = required.findAll { column -> !header.contains(column) }
+    if (missing) error "${stage} manifest is missing columns: ${missing.join(', ')}"
+    def pathColumns = (['phenotype_file', 'region_file'] + stageColumns[stage]).unique()
+    def identifiers = ['task_id', 'celltype', 'cluster_id', 'phenotype_id']
+
+    def rows = []
+    lines.drop(1).eachWithIndex { line, index ->
+        def rowNumber = index + 2
+        def values = line.replaceAll('\\r$', '').split('\t', -1) as List
+        if (values.size() != header.size()) {
+            error "${stage} manifest row ${rowNumber} has ${values.size()} fields; expected ${header.size()}"
+        }
+        def row = [header, values].transpose().collectEntries()
+        identifiers.each { column ->
+            if (!(row[column] ==~ /[A-Za-z0-9][A-Za-z0-9_.-]*/)) {
+                error "${stage} manifest row ${rowNumber} has an unsafe ${column}: ${row[column]}"
+            }
+        }
+        if (!(row.chromosome ==~ /[0-9]+/) || row.chromosome.toInteger() < 1 || row.chromosome.toInteger() > 22) {
+            error "${stage} manifest row ${rowNumber} chromosome must be 1-22: ${row.chromosome}"
+        }
+        row.chromosome = row.chromosome.toInteger()
+        pathColumns.each { column ->
+            row[column] = resolveManifestPath(manifestFile, row[column], column, rowNumber)
+        }
+        validatePhenotypeFile(row.phenotype_file, row.phenotype_id, rowNumber)
+        validateRegionFile(row.region_file, row.chromosome as Integer, rowNumber)
+        rows << row
+    }
+    def duplicateIds = rows.groupBy { row -> row.task_id }.findAll { _id, members -> members.size() > 1 }.keySet()
+    if (duplicateIds) error "${stage} manifest has duplicate task_id values: ${duplicateIds.sort().join(', ')}"
+    rows
+}
+
+def runMetadata(parameters, workflowContext, entryName) {
+    def metadata = new LinkedHashMap(parameters)
+    metadata.workflow_version = workflowContext.manifest.version
+    metadata.workflow_entry = entryName
+    metadata.workflow = [
+        project_name: workflowContext.projectName?.toString(),
+        repository: workflowContext.repository?.toString(),
+        revision: workflowContext.revision?.toString(),
+        commit_id: workflowContext.commitId?.toString(),
+        session_id: workflowContext.sessionId?.toString(),
+        run_name: workflowContext.runName?.toString(),
+        profile: workflowContext.profile?.toString(),
+        command_line: workflowContext.commandLine?.toString(),
+        nextflow_version: nextflow.version?.toString(),
+        container_engine: workflowContext.containerEngine?.toString(),
+        resume: workflowContext.resume as Boolean
+    ]
+    metadata.configured_containers = [
+        core: metadata.get('core_container')?.toString(),
+        saigeqtl: metadata.get('saige_container')?.toString()
+    ]
+    metadata
+}
+
+workflow SAIGE_STEP1 {
+    requireStageExecution('saige_step1')
+    requireParam('qtl_manifest', params.qtl_manifest)
+    if (!params.variance_ratio_prefix) requireGenotypePrefix(params.genotype_prefix)
+
+    manifestFile = file(params.qtl_manifest, checkIfExists: true)
+    rows = parseSaigeManifest(manifestFile, 'qtl')
+    workflowBin = channel.value(file("${projectDir}/bin", checkIfExists: true))
+    qtlRows = channel.fromList(rows).map { row ->
+        tuple(row.task_id, row.celltype, row.cluster_id, row.phenotype_id,
+              row.chromosome as Integer, row.phenotype_file, row.region_file,
+              file(row.phenotype_file, checkIfExists: true))
+    }
+
+    defaults = channel.value(file("${projectDir}/assets/saigeqtl_defaults.tsv", checkIfExists: true))
+    userSaige = channel.value(file(params.saige_params ?: "${projectDir}/assets/empty_saige_params.tsv", checkIfExists: true))
+    RESOLVE_SAIGE_PARAMS(defaults, userSaige, workflowBin)
+    WRITE_RUN_METADATA(channel.value(runMetadata(params, workflow, 'SAIGE_STEP1')))
+
+    def infoRoot = new File(params.outdir.toString(), "pipeline_info/${params.execution_name}").absolutePath
+    def resolvedSource = new File(infoRoot, 'resolved_saigeqtl_params.tsv').absolutePath
+    if (params.variance_ratio_prefix) {
+        vrChannel = channel.value(tuple(
+            file(params.variance_ratio_prefix + '.bed', checkIfExists: true),
+            file(params.variance_ratio_prefix + '.bim', checkIfExists: true),
+            file(params.variance_ratio_prefix + '.fam', checkIfExists: true)))
+        vrFamSource = new File(params.variance_ratio_prefix.toString() + '.fam').absolutePath
+    } else {
+        genotypeBeds = (1..22).collect { chr -> file(params.genotype_prefix.replace('{chr}', chr.toString()) + '.bed', checkIfExists: true) }
+        genotypeBims = (1..22).collect { chr -> file(params.genotype_prefix.replace('{chr}', chr.toString()) + '.bim', checkIfExists: true) }
+        genotypeFams = (1..22).collect { chr -> file(params.genotype_prefix.replace('{chr}', chr.toString()) + '.fam', checkIfExists: true) }
+        BUILD_VARIANCE_RATIO(channel.value(genotypeBeds), channel.value(genotypeBims), channel.value(genotypeFams), workflowBin)
+        vrChannel = BUILD_VARIANCE_RATIO.out.plink
+        vrFamSource = new File(infoRoot, 'variance_ratio/auto_vr.fam').absolutePath
+    }
+
+    step1Inputs = qtlRows.combine(vrChannel).combine(RESOLVE_SAIGE_PARAMS.out.table).map {
+        taskId, celltype, clusterId, phenotypeId, chromosome, phenotypeSource, regionSource,
+        phenotypeFile, vrBed, vrBim, vrFam, saigeParams ->
+        tuple(taskId, celltype, clusterId, phenotypeId, chromosome,
+              phenotypeSource, regionSource, phenotypeFile, vrBed, vrBim, vrFam,
+              vrFamSource, saigeParams, resolvedSource)
+    }
+    RUN_SAIGE_STEP1(step1Inputs, workflowBin)
+    stage1Directories = RUN_SAIGE_STEP1.out.result.map { _taskId, directory -> directory }.collect()
+    WRITE_SAIGE_STAGE_MANIFEST(channel.value('step1'), stage1Directories, workflowBin)
+}
+
+workflow SAIGE_STEP2 {
+    requireStageExecution('saige_step2')
+    requireParam('step1_manifest', params.step1_manifest)
+    requireGenotypePrefix(params.genotype_prefix)
+
+    manifestFile = file(params.step1_manifest, checkIfExists: true)
+    rows = parseSaigeManifest(manifestFile, 'step1')
+    workflowBin = channel.value(file("${projectDir}/bin", checkIfExists: true))
+    WRITE_RUN_METADATA(channel.value(runMetadata(params, workflow, 'SAIGE_STEP2')))
+
+    step2Inputs = channel.fromList(rows).map { row ->
+        def prefix = params.genotype_prefix.replace('{chr}', row.chromosome.toString())
+        tuple(row.task_id, row.celltype, row.cluster_id, row.phenotype_id,
+              row.chromosome as Integer, row.phenotype_file, row.region_file,
+              file(row.region_file, checkIfExists: true),
+              file(prefix + '.bed', checkIfExists: true),
+              file(prefix + '.bim', checkIfExists: true),
+              file(prefix + '.fam', checkIfExists: true),
+              file(row.variance_ratio_fam_file, checkIfExists: true),
+              file(row.null_model_file, checkIfExists: true),
+              file(row.variance_ratio_file, checkIfExists: true),
+              file(row.saige_params_file, checkIfExists: true), row.saige_params_file)
+    }
+    RUN_SAIGE_STEP2(step2Inputs, workflowBin)
+    stage2Directories = RUN_SAIGE_STEP2.out.result.map { _taskId, directory -> directory }.collect()
+    WRITE_SAIGE_STAGE_MANIFEST(channel.value('step2'), stage2Directories, workflowBin)
+}
+
+workflow SAIGE_STEP3 {
+    requireStageExecution('saige_step3')
+    requireParam('step2_manifest', params.step2_manifest)
+
+    manifestFile = file(params.step2_manifest, checkIfExists: true)
+    rows = parseSaigeManifest(manifestFile, 'step2')
+    workflowBin = channel.value(file("${projectDir}/bin", checkIfExists: true))
+    WRITE_RUN_METADATA(channel.value(runMetadata(params, workflow, 'SAIGE_STEP3')))
+
+    step3Inputs = channel.fromList(rows).map { row ->
+        tuple(row.task_id, row.celltype, row.cluster_id, row.phenotype_id,
+              row.chromosome as Integer, row.phenotype_file, row.region_file,
+              file(row.association_file, checkIfExists: true),
+              file(row.saige_params_file, checkIfExists: true), row.saige_params_file)
+    }
+    RUN_SAIGE_STEP3(step3Inputs, workflowBin)
+    stage3Directories = RUN_SAIGE_STEP3.out.result.map { _taskId, _celltype, directory -> directory }.collect()
+    WRITE_SAIGE_STAGE_MANIFEST(channel.value('step3'), stage3Directories, workflowBin)
+    COLLECT_QTL_RESULTS(stage3Directories, workflowBin)
 }
 
 workflow {
@@ -87,12 +340,7 @@ workflow {
     if (params.min_cluster_genes as Integer > params.max_cluster_genes as Integer) {
         error 'min_cluster_genes cannot exceed max_cluster_genes'
     }
-    if (params.run_qtl) {
-        requireParam('genotype_prefix', params.genotype_prefix)
-        if (!params.genotype_prefix.toString().contains('{chr}')) {
-            error '--genotype_prefix must contain the {chr} placeholder'
-        }
-    }
+    if (params.run_qtl) requireGenotypePrefix(params.genotype_prefix)
 
     inputFile = file(params.input, checkIfExists: true)
     annotation = channel.value(file(params.gene_annotation, checkIfExists: true))
@@ -103,36 +351,14 @@ workflow {
         .map { row ->
             def celltype = row.get('celltype')
             def counts = row.get('counts')
-            if (!celltype || !counts) {
-                error "Validated samplesheet row lacks celltype/counts fields: ${row}"
-            }
+            if (!celltype || !counts) error "Validated samplesheet row lacks celltype/counts fields: ${row}"
             tuple(celltype.toString(), file(counts.toString(), checkIfExists: true))
         }
     sampleCounts = samples.map { celltype, counts -> tuple(celltype, counts) }
 
     defaults = channel.value(file("${projectDir}/assets/saigeqtl_defaults.tsv", checkIfExists: true))
     userSaige = channel.value(file(params.saige_params ?: "${projectDir}/assets/empty_saige_params.tsv", checkIfExists: true))
-    runParameters = new LinkedHashMap(params)
-    runParameters.workflow_version = workflow.manifest.version
-    runParameters.workflow = [
-        project_name: workflow.projectName?.toString(),
-        repository: workflow.repository?.toString(),
-        revision: workflow.revision?.toString(),
-        commit_id: workflow.commitId?.toString(),
-        session_id: workflow.sessionId?.toString(),
-        run_name: workflow.runName?.toString(),
-        profile: workflow.profile?.toString(),
-        command_line: workflow.commandLine?.toString(),
-        nextflow_version: nextflow.version?.toString(),
-        container_engine: workflow.containerEngine?.toString(),
-        resume: workflow.resume as Boolean
-    ]
-    runParameters.configured_containers = [
-        core: params.core_container?.toString(),
-        saigeqtl: params.saige_container?.toString()
-    ]
-
-    WRITE_RUN_METADATA(channel.value(runParameters))
+    WRITE_RUN_METADATA(channel.value(runMetadata(params, workflow, 'default')))
     PREPARE_CELLTYPE(samples, annotation, workflowBin)
     RESOLVE_SAIGE_PARAMS(defaults, userSaige, workflowBin)
     PLAN_PAIR_TASKS(PREPARE_CELLTYPE.out.stage, workflowBin)
@@ -153,32 +379,80 @@ workflow {
         .join(PREPARE_CELLTYPE.out.stage)
         .join(sampleCounts)
     RUN_CLUSTER_PCA(pcaInputs, workflowBin)
+    pcaDirectories = RUN_CLUSTER_PCA.out.pca.map { _celltype, pcaDir -> pcaDir }.collect()
+    COLLECT_QTL_TASKS(pcaDirectories, workflowBin)
 
     if (params.run_qtl) {
         genotypeBeds = (1..22).collect { chr -> file(params.genotype_prefix.replace('{chr}', chr.toString()) + '.bed', checkIfExists: true) }
         genotypeBims = (1..22).collect { chr -> file(params.genotype_prefix.replace('{chr}', chr.toString()) + '.bim', checkIfExists: true) }
         genotypeFams = (1..22).collect { chr -> file(params.genotype_prefix.replace('{chr}', chr.toString()) + '.fam', checkIfExists: true) }
+        def publishedPhenotypeRoot = new File(params.outdir.toString(), 'phenotypes').absolutePath
+        def resolvedSource = new File(params.outdir.toString(), 'pipeline_info/resolved_saigeqtl_params.tsv').absolutePath
 
         if (params.variance_ratio_prefix) {
             vrChannel = channel.value(tuple(
                 file(params.variance_ratio_prefix + '.bed', checkIfExists: true),
                 file(params.variance_ratio_prefix + '.bim', checkIfExists: true),
                 file(params.variance_ratio_prefix + '.fam', checkIfExists: true)))
+            vrFamSource = new File(params.variance_ratio_prefix.toString() + '.fam').absolutePath
         } else {
             BUILD_VARIANCE_RATIO(channel.value(genotypeBeds), channel.value(genotypeBims), channel.value(genotypeFams), workflowBin)
             vrChannel = BUILD_VARIANCE_RATIO.out.plink
+            vrFamSource = new File(params.outdir.toString(), 'pipeline_info/variance_ratio/auto_vr.fam').absolutePath
         }
 
-        qtlRows = RUN_CLUSTER_PCA.out.pca.flatMap { celltype, pcaDir -> parseQtlTable(pcaDir, celltype) }
-        qtlGenotypes = qtlRows.map { celltype, taskId, clusterId, phenotypeId, chromosome, phenotypeFile, regionFile ->
+        qtlRows = RUN_CLUSTER_PCA.out.pca.flatMap { celltype, pcaDir ->
+            parsePcaQtlTable(pcaDir, celltype, publishedPhenotypeRoot)
+        }
+        step1Inputs = qtlRows.combine(vrChannel).combine(RESOLVE_SAIGE_PARAMS.out.table).map {
+            taskId, celltype, clusterId, phenotypeId, chromosome, phenotypeSource, regionSource,
+            phenotypeFile, _regionFile, vrBed, vrBim, vrFam, saigeParams ->
+            tuple(taskId, celltype, clusterId, phenotypeId, chromosome,
+                  phenotypeSource, regionSource, phenotypeFile, vrBed, vrBim, vrFam,
+                  vrFamSource, saigeParams, resolvedSource)
+        }
+        RUN_SAIGE_STEP1(step1Inputs, workflowBin)
+
+        qtlGenotypes = qtlRows.map {
+            taskId, celltype, clusterId, phenotypeId, chromosome, phenotypeSource, regionSource,
+            _phenotypeFile, regionFile ->
             def prefix = params.genotype_prefix.replace('{chr}', chromosome.toString())
-            tuple(celltype, taskId, clusterId, phenotypeId, chromosome, phenotypeFile, regionFile,
-                  file(prefix + '.bed', checkIfExists: true), file(prefix + '.bim', checkIfExists: true),
+            tuple(taskId, celltype, clusterId, phenotypeId, chromosome,
+                  phenotypeSource, regionSource, regionFile,
+                  file(prefix + '.bed', checkIfExists: true),
+                  file(prefix + '.bim', checkIfExists: true),
                   file(prefix + '.fam', checkIfExists: true))
         }
-        qtlWithVr = qtlGenotypes.combine(vrChannel).combine(RESOLVE_SAIGE_PARAMS.out.table)
-        RUN_SAIGE_QTL(qtlWithVr, workflowBin)
-        qtlResults = RUN_SAIGE_QTL.out.result.map { _celltype, directory -> directory }.collect()
+        step2Inputs = qtlGenotypes.join(RUN_SAIGE_STEP1.out.result, by: 0)
+            .combine(vrChannel)
+            .combine(RESOLVE_SAIGE_PARAMS.out.table)
+            .map {
+                taskId, celltype, clusterId, phenotypeId, chromosome, phenotypeSource, regionSource,
+                regionFile, bed, bim, fam, step1Dir, _vrBed, _vrBim, vrFam, saigeParams ->
+                tuple(taskId, celltype, clusterId, phenotypeId, chromosome,
+                      phenotypeSource, regionSource, regionFile, bed, bim, fam, vrFam,
+                      step1Dir.resolve('saige_null_model.rda'),
+                      step1Dir.resolve('saige_null_model.varianceRatio.txt'),
+                      saigeParams, resolvedSource)
+            }
+        RUN_SAIGE_STEP2(step2Inputs, workflowBin)
+
+        qtlMetadata = qtlRows.map {
+            taskId, celltype, clusterId, phenotypeId, chromosome, phenotypeSource, regionSource,
+            _phenotypeFile, _regionFile ->
+            tuple(taskId, celltype, clusterId, phenotypeId, chromosome, phenotypeSource, regionSource)
+        }
+        step3Inputs = qtlMetadata.join(RUN_SAIGE_STEP2.out.result, by: 0)
+            .combine(RESOLVE_SAIGE_PARAMS.out.table)
+            .map {
+                taskId, celltype, clusterId, phenotypeId, chromosome, phenotypeSource, regionSource,
+                step2Dir, saigeParams ->
+                tuple(taskId, celltype, clusterId, phenotypeId, chromosome,
+                      phenotypeSource, regionSource, step2Dir.resolve('association.tsv'),
+                      saigeParams, resolvedSource)
+            }
+        RUN_SAIGE_STEP3(step3Inputs, workflowBin)
+        qtlResults = RUN_SAIGE_STEP3.out.result.map { _taskId, _celltype, directory -> directory }.collect()
         COLLECT_QTL_RESULTS(qtlResults, workflowBin)
     }
 }

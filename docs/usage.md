@@ -85,7 +85,9 @@ resolve to BED, BIM, and FAM files for chromosomes 1 through 22, for example:
 
 Donor IDs in the phenotype table must map to genotype sample IDs. Extra
 genotype samples are allowed. Use `--run_qtl false` to stop after cluster-PC
-phenotype construction; genotype input is then optional.
+phenotype construction; genotype input is then optional. This mode still
+writes the global `phenotypes/qtl_tasks.tsv` manifest required by standalone
+SAIGE-QTL execution.
 
 ## Variance-ratio markers
 
@@ -156,3 +158,8 @@ nextflow run ZhouLabGenetics/sc-pcQTL -profile apptainer,slurm \
 ```
 
 Do not edit the workflow's committed profiles for a single installation.
+
+For large QTL scans, `sc-pcqtl saige step1`, `step2`, and `step3` divide the
+SAIGE-QTL work into three manifest-driven runs without changing the statistical
+settings or final output tables. Complete commands and the external phenotype
+manifest schema are provided in [SAIGE-QTL execution](saigeqtl.md).

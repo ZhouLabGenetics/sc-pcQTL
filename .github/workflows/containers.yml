@@ -102,3 +102,24 @@ jobs:
             --outdir results/release-example
           test -s results/release-example/pipeline_info/execution_trace.txt
           test -s results/release-example/summary/significant_pcqtl_phenotypes.tsv
+      - name: Re-run bundled QTL tasks through the three staged entries
+        shell: bash
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          common=(--core_container "ghcr.io/zhoulabgenetics/sc-pcqtl-core:${version}"
+                  --saige_container "ghcr.io/zhoulabgenetics/sc-pcqtl-saigeqtl:${version}"
+                  --outdir results/release-example)
+          nextflow run . -entry SAIGE_STEP1 -profile docker,example -ansi-log false \
+            --execution_name saige_step1 --publish_saige_intermediates true \
+            --qtl_manifest results/release-example/phenotypes/qtl_tasks.tsv \
+            --variance_ratio_prefix "$PWD/examples/variance_ratio" "${common[@]}"
+          nextflow run . -entry SAIGE_STEP2 -profile docker,example -ansi-log false \
+            --execution_name saige_step2 --publish_saige_intermediates true \
+            --step1_manifest results/release-example/qtl/manifests/step1.tsv \
+            --genotype_prefix "$PWD/examples/genotype_chr{chr}" "${common[@]}"
+          nextflow run . -entry SAIGE_STEP3 -profile docker,example -ansi-log false \
+            --execution_name saige_step3 --publish_saige_intermediates true \
+            --step2_manifest results/release-example/qtl/manifests/step2.tsv \
+            "${common[@]}"
+          test -s results/release-example/qtl/manifests/step3.tsv
+          test -s results/release-example/pipeline_info/saige_step3/execution_trace.txt

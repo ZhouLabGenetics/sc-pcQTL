@@ -100,6 +100,11 @@ one explicitly. Run `sc-pcqtl run --help` for a concise workflow summary.
 Direct `nextflow run` commands remain supported for advanced and institutional
 deployments.
 
+SAIGE-QTL can optionally be submitted as three independent batch stages with
+`sc-pcqtl saige step1`, `step2`, and `step3`. This is useful when null-model
+fitting, association testing, and regional aggregation require separate HPC
+allocations. See the [complete staged execution guide](docs/saigeqtl.md).
+
 ## Statistical Modes
 
 The default statistical mode uses `--pair_scope fast` and
@@ -121,7 +126,7 @@ within-chromosome autosomal pairs among filtered genes.
 - [Inputs and execution](docs/usage.md)
 - [Parameters](docs/parameters.md)
 - [Method definitions](docs/methods.md)
-- [SAIGE-QTL customization](docs/saigeqtl.md)
+- [SAIGE-QTL execution and customization](docs/saigeqtl.md)
 - [Outputs](docs/outputs.md)
 - [Troubleshooting](docs/troubleshooting.md)
 

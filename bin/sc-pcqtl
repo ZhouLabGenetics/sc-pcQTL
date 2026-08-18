@@ -14,6 +14,9 @@ Usage:
   sc-pcqtl doctor [--deep]
   sc-pcqtl example [Nextflow options]
   sc-pcqtl run [pipeline parameters]
+  sc-pcqtl saige step1 [parameters]
+  sc-pcqtl saige step2 [parameters]
+  sc-pcqtl saige step3 [parameters]
   sc-pcqtl nextflow [Nextflow arguments]
   sc-pcqtl version
 
@@ -24,6 +27,20 @@ Environment overrides:
   SCPCQTL_NEXTFLOW  Nextflow executable
   SCPCQTL_EXTRA_PROFILES  Additional profiles, for example slurm or sge
   SCPCQTL_SMOKE_IMAGE  Small image used by doctor --deep
+EOF
+}
+
+saige_usage() {
+  cat <<'EOF'
+Run SAIGE-QTL as independently resumable batch stages:
+
+  sc-pcqtl saige step1 --qtl_manifest PATH [genotype/variance-ratio options]
+  sc-pcqtl saige step2 --step1_manifest PATH --genotype_prefix PREFIX
+  sc-pcqtl saige step3 --step2_manifest PATH
+
+All stages accept --outdir and ordinary Nextflow options. Step 1 resolves the
+SAIGE-QTL parameter table once; later stages inherit it through their input
+manifest. See docs/saigeqtl.md for complete examples.
 EOF
 }
 
@@ -270,11 +287,27 @@ print_run() {
 run_pipeline() {
   local mode=$1
   shift
-  local runtime profiles
+  local runtime profiles entry execution_name
   local -a command_args
   runtime=$(select_runtime)
   profiles=$runtime
   [[ "$mode" == 'example' ]] && profiles="${runtime},example"
+  entry=''
+  execution_name=''
+  case "$mode" in
+    saige_step1) entry=SAIGE_STEP1; execution_name=saige_step1 ;;
+    saige_step2) entry=SAIGE_STEP2; execution_name=saige_step2 ;;
+    saige_step3) entry=SAIGE_STEP3; execution_name=saige_step3 ;;
+  esac
+  if [[ -n "$execution_name" ]]; then
+    for argument in "$@"; do
+      case "$argument" in
+        --execution_name|--execution_name=*|--publish_saige_intermediates|--publish_saige_intermediates=*)
+          die 'execution_name and publish_saige_intermediates are managed by sc-pcqtl saige'
+          ;;
+      esac
+    done
+  fi
   if [[ -n "${SCPCQTL_EXTRA_PROFILES:-}" ]]; then
     [[ "$SCPCQTL_EXTRA_PROFILES" =~ ^[A-Za-z0-9_.-]+(,[A-Za-z0-9_.-]+)*$ ]] || \
       die 'SCPCQTL_EXTRA_PROFILES must be a comma-separated profile list'
@@ -287,7 +320,11 @@ run_pipeline() {
   if [[ ! -d "$pipeline" && -n "$revision" ]]; then
     command_args+=(-r "$revision")
   fi
+  [[ -z "$entry" ]] || command_args+=(-entry "$entry")
   command_args+=(-profile "$profiles")
+  if [[ -n "$execution_name" ]]; then
+    command_args+=(--execution_name "$execution_name" --publish_saige_intermediates true)
+  fi
   exec "$nextflow_bin" "${command_args[@]}" "$@"
 }
 
@@ -297,6 +334,21 @@ case "$command_name" in
   doctor) doctor "$@" ;;
   example) run_pipeline example "$@" ;;
   run) run_pipeline run "$@" ;;
+  saige)
+    stage=${1:-help}
+    [[ $# -eq 0 ]] || shift
+    case "$stage" in
+      step1|step2|step3)
+        if [[ "${1:-}" == '--help' || "${1:-}" == '-h' ]]; then
+          saige_usage
+        else
+          run_pipeline "saige_${stage}" "$@"
+        fi
+        ;;
+      help|--help|-h) saige_usage ;;
+      *) saige_usage >&2; die "unknown SAIGE-QTL stage: $stage" ;;
+    esac
+    ;;
   nextflow) exec "$nextflow_bin" "$@" ;;
   version|--version|-v) printf 'sc-pcqtl %s\n' "$launcher_version" ;;
   help|--help|-h) usage ;;

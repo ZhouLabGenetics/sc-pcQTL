@@ -1,7 +1,8 @@
 process WRITE_RUN_METADATA {
     tag 'run metadata'
     label 'process_low'
-    publishDir "${params.outdir}/pipeline_info", mode: 'copy', overwrite: true
+    publishDir "${params.outdir}/pipeline_info${params.execution_name ? '/' + params.execution_name : ''}",
+        mode: 'copy', overwrite: true
 
     input:
     val run_parameters

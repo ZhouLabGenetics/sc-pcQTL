@@ -63,9 +63,23 @@ if "$root/bin/sc-pcqtl" doctor --unknown >/dev/null 2>&1; then
 fi
 "$root/bin/sc-pcqtl" example --outdir example-output >/dev/null
 "$root/bin/sc-pcqtl" run --input samplesheet.csv >/dev/null
+"$root/bin/sc-pcqtl" saige step1 --qtl_manifest qtl_tasks.tsv >/dev/null
+"$root/bin/sc-pcqtl" saige step2 --step1_manifest step1.tsv --genotype_prefix 'geno_chr{chr}' >/dev/null
+"$root/bin/sc-pcqtl" saige step3 --step2_manifest step2.tsv >/dev/null
 
 grep -Fq 'run ZhouLabGenetics/sc-pcQTL -r main -profile docker,example --outdir example-output' "$SCPCQTL_TEST_CAPTURE"
 grep -Fq 'run ZhouLabGenetics/sc-pcQTL -r main -profile docker --input samplesheet.csv' "$SCPCQTL_TEST_CAPTURE"
+grep -Fq 'run ZhouLabGenetics/sc-pcQTL -r main -entry SAIGE_STEP1 -profile docker --execution_name saige_step1 --publish_saige_intermediates true --qtl_manifest qtl_tasks.tsv' "$SCPCQTL_TEST_CAPTURE"
+grep -Fq "run ZhouLabGenetics/sc-pcQTL -r main -entry SAIGE_STEP2 -profile docker --execution_name saige_step2 --publish_saige_intermediates true --step1_manifest step1.tsv --genotype_prefix geno_chr{chr}" "$SCPCQTL_TEST_CAPTURE"
+grep -Fq 'run ZhouLabGenetics/sc-pcQTL -r main -entry SAIGE_STEP3 -profile docker --execution_name saige_step3 --publish_saige_intermediates true --step2_manifest step2.tsv' "$SCPCQTL_TEST_CAPTURE"
+if "$root/bin/sc-pcqtl" saige step4 >/dev/null 2>&1; then
+  printf 'Unknown SAIGE-QTL stage was not rejected.\n' >&2
+  exit 1
+fi
+if "$root/bin/sc-pcqtl" saige step1 --execution_name custom >/dev/null 2>&1; then
+  printf 'A reserved staged-execution parameter was accepted.\n' >&2
+  exit 1
+fi
 
 export SCPCQTL_RUNTIME=podman
 "$root/bin/sc-pcqtl" run --input samplesheet.csv >/dev/null

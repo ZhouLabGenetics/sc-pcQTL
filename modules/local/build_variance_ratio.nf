@@ -1,7 +1,8 @@
 process BUILD_VARIANCE_RATIO {
     tag 'variance-ratio markers'
     label 'process_high'
-    publishDir "${params.outdir}/pipeline_info/variance_ratio", mode: 'copy', overwrite: true
+    publishDir "${params.outdir}/pipeline_info${params.execution_name ? '/' + params.execution_name : ''}/variance_ratio",
+        mode: 'copy', overwrite: true
 
     input:
     path beds

@@ -63,6 +63,9 @@ still modeled.
 | `run_qtl` | `true` | Run SAIGE-QTL after phenotype construction |
 | `saige_params` | unset | Custom SAIGE-QTL parameter table |
 | `variance_ratio_prefix` | unset | Existing variance-ratio PLINK marker prefix |
+| `qtl_manifest` | unset | Global phenotype task manifest for standalone step 1 |
+| `step1_manifest` | unset | Completed null-model manifest for standalone step 2 |
+| `step2_manifest` | unset | Completed association manifest for standalone step 3 |
 | `save_directional_tests` | `false` | Publish all directional pair-test records |
 | `count_block_size` | 100 | Internal genes per staged expression block |
 | `pair_responses_per_task` | 10 | Response genes per pair task in either scheduling mode |
@@ -78,3 +81,8 @@ still modeled.
 Use a custom Nextflow config to override process memory, time, CPU, queue, or
 executor settings. Statistical parameters should be passed on the command
 line or in a Nextflow parameter file.
+
+The launcher sets the internal `execution_name` and
+`publish_saige_intermediates` parameters for standalone stages. Users should
+normally invoke these through `sc-pcqtl saige`; see
+[SAIGE-QTL execution](saigeqtl.md).
