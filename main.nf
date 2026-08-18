@@ -74,11 +74,9 @@ Core options:
   --saige_params PATH        Optional step,parameter,value override table
   --outdir PATH              Output directory (default: results)
 
-SAIGE-QTL can also be run as three independent manifest-driven stages with
-sc-pcqtl saige step1, step2, and step3.
-
-The upstream analysis can be run as three independent stages with sc-pcqtl
-upstream step1, step2, and step3.
+The complete workflow can be run as six independent manifest-driven stages:
+sc-pcqtl upstream step1, step2, and step3, followed by sc-pcqtl saige step1,
+step2, and step3.
 
 Documentation: https://github.com/ZhouLabGenetics/sc-pcQTL
 '''.stripIndent()

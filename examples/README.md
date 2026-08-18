@@ -82,36 +82,83 @@ storage, and emulation.
 The maintainer-only data generator is isolated under `dev/example-data/` and
 is not called during a normal workflow run.
 
-## Run SAIGE-QTL as three stages
+## Run the complete workflow step by step
 
-The bundled data can also exercise the independently resumable SAIGE-QTL
-interface. From a cloned repository, use these exact commands:
+The bundled data can also exercise all six independently resumable stages.
+The first three commands prepare the expression data, test gene pairs, call
+local clusters, and construct cluster-PC phenotypes. The final three commands
+run SAIGE-QTL and generate the combined cis-pcQTL results. From a cloned
+repository, use these exact commands:
 
 ```bash
-SCPCQTL_PIPELINE="$PWD" sc-pcqtl example \
-  --run_qtl false \
-  --outdir results/example_staged
+export SCPCQTL_PIPELINE="$PWD"
+export SCPCQTL_EXTRA_PROFILES=example
 ```
 
+### Step 1: prepare inputs and test gene pairs
+
 ```bash
-SCPCQTL_PIPELINE="$PWD" sc-pcqtl saige step1 \
+sc-pcqtl upstream step1 \
+  --input "$PWD/examples/samplesheet.csv" \
+  --gene_annotation "$PWD/examples/gene_annotation.tsv" \
+  --outdir results/example_staged \
+  -work-dir work/example-upstream-step1 \
+  -resume
+```
+
+### Step 2: call local co-expression clusters
+
+```bash
+sc-pcqtl upstream step2 \
+  --upstream_step1_manifest results/example_staged/upstream/manifests/step1.tsv \
+  --outdir results/example_staged \
+  -work-dir work/example-upstream-step2 \
+  -resume
+```
+
+### Step 3: construct cluster-PC phenotypes
+
+```bash
+sc-pcqtl upstream step3 \
+  --upstream_step2_manifest results/example_staged/upstream/manifests/step2.tsv \
+  --outdir results/example_staged \
+  -work-dir work/example-upstream-step3 \
+  -resume
+```
+
+### Step 4: fit SAIGE-QTL null models
+
+```bash
+sc-pcqtl saige step1 \
   --qtl_manifest results/example_staged/phenotypes/qtl_tasks.tsv \
   --variance_ratio_prefix "$PWD/examples/variance_ratio" \
-  --outdir results/example_staged
+  --outdir results/example_staged \
+  -work-dir work/example-saige-step1 \
+  -resume
 ```
 
+### Step 5: run regional association tests
+
 ```bash
-SCPCQTL_PIPELINE="$PWD" sc-pcqtl saige step2 \
+sc-pcqtl saige step2 \
   --step1_manifest results/example_staged/qtl/manifests/step1.tsv \
   --genotype_prefix "$PWD/examples/genotype_chr{chr}" \
-  --outdir results/example_staged
+  --outdir results/example_staged \
+  -work-dir work/example-saige-step2 \
+  -resume
 ```
 
+### Step 6: calculate regional results and summaries
+
 ```bash
-SCPCQTL_PIPELINE="$PWD" sc-pcqtl saige step3 \
+sc-pcqtl saige step3 \
   --step2_manifest results/example_staged/qtl/manifests/step2.tsv \
-  --outdir results/example_staged
+  --outdir results/example_staged \
+  -work-dir work/example-saige-step3 \
+  -resume
 ```
 
 The resulting `summary/` tables are the same as those from the single
-end-to-end example command.
+end-to-end example command. Each stage must finish and write its manifest
+before the next stage starts. The stages may use separate scheduler jobs and
+resource settings while retaining parallel execution within each stage.

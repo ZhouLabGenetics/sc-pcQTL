@@ -100,18 +100,23 @@ one explicitly. Run `sc-pcqtl run --help` for a concise workflow summary.
 Direct `nextflow run` commands remain supported for advanced and institutional
 deployments.
 
-For large inputs, the expression-to-phenotype workflow can be submitted as
-three independent stages with `sc-pcqtl upstream step1`, `step2`, and `step3`.
-Step 1 combines cell-type preparation with the parallel hurdle pair screen;
-Steps 2 and 3 call clusters and construct cluster-PC phenotypes. See the
-[three-stage upstream guide](docs/upstream.md).
+## Run the complete workflow step by step
 
-SAIGE-QTL can optionally be submitted as three independent batch stages with
-`sc-pcqtl saige step1`, `step2`, and `step3`. This is useful when null-model
-fitting, association testing, and regional aggregation require separate HPC
-allocations. See the [complete staged execution guide](docs/saigeqtl.md).
-For scheduler configuration, concurrency limits, recovery, and large-cohort
-batch patterns, see [large-scale and HPC execution](docs/large-scale.md).
+The complete analysis can be submitted as six independently resumable stages:
+
+1. `sc-pcqtl upstream step1`: prepare inputs and test gene pairs;
+2. `sc-pcqtl upstream step2`: call local co-expression clusters;
+3. `sc-pcqtl upstream step3`: construct cluster-PC phenotypes;
+4. `sc-pcqtl saige step1`: fit SAIGE-QTL null models;
+5. `sc-pcqtl saige step2`: run regional association tests; and
+6. `sc-pcqtl saige step3`: calculate regional results and final summaries.
+
+See the [complete example commands](examples/README.md#run-the-complete-workflow-step-by-step).
+For production datasets, manifest interfaces, scheduler configuration,
+concurrency limits, recovery, and large-cohort batch patterns are documented
+in [large-scale and HPC execution](docs/large-scale.md). Detailed upstream and
+QTL-stage behavior is described in the [upstream](docs/upstream.md) and
+[SAIGE-QTL](docs/saigeqtl.md) guides.
 
 ## Statistical Modes
 
@@ -132,6 +137,7 @@ within-chromosome autosomal pairs among filtered genes.
 
 - [Installation](docs/installation.md)
 - [Inputs and execution](docs/usage.md)
+- [Complete step-by-step example](examples/README.md#run-the-complete-workflow-step-by-step)
 - [Three-stage upstream execution](docs/upstream.md)
 - [Large-scale and HPC batch execution](docs/large-scale.md)
 - [Parameters](docs/parameters.md)
