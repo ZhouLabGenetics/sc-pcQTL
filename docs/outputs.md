@@ -62,7 +62,7 @@ estimates under `qtl/step1/<task>/` and writes `step1.tsv`, `step2.tsv`, and
 keeps null models in the Nextflow work directory rather than duplicating these
 large intermediates in the result directory.
 
-Three-stage upstream execution publishes reusable prepared cell-type data under
+Staged upstream execution publishes reusable prepared cell-type data under
 `upstream/step1/prepared/<celltype>/` and writes `step1.tsv`, `step2.tsv`, and
 `step3.tsv` under `upstream/manifests/`. These manifests carry validated paths
 from preparation and pair testing to cluster calling and then cluster-PC

@@ -273,9 +273,24 @@ QTL summary tables. The staged analysis therefore produces the same statistical
 outputs as the end-to-end QTL path while retaining intermediate null models and
 stage manifests.
 
-Upstream manifests and parameter ownership are documented in
-[three-stage upstream execution](upstream.md). QTL manifest schemas are
-documented in [SAIGE-QTL execution and customization](saigeqtl.md).
+### Parameter ownership across upstream stages
+
+Use the same parameter file or institutional Nextflow configuration for all
+three upstream commands. Upstream Step 1 owns expression filtering and
+pair-test settings. Step 2 owns cluster density and minimum cluster size, but
+`max_cluster_genes` must match Step 1 because it affects pair scheduling. Step
+3 owns `pca_variance` and `cis_window`, while its covariate list must match Step
+1. The workflow validates these cross-stage dependencies before submitting
+tasks.
+
+The three commands may use different process resources, queues, concurrency
+limits, and persistent work directories. Keep one shared `--outdir`; the stage
+manifests contain absolute paths to the published intermediates consumed by
+the next command. A manifest is written only after every task in that stage
+has completed successfully.
+
+QTL manifest schemas and SAIGE-QTL parameter ownership are documented in
+[SAIGE-QTL execution and customization](saigeqtl.md).
 
 ## Scheduler submission pattern
 

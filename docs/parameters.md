@@ -87,5 +87,5 @@ line or in a Nextflow parameter file.
 The launcher manages internal stage-selection and intermediate-publication
 parameters. Users should invoke staged runs through `sc-pcqtl upstream` or
 `sc-pcqtl saige`, rather than setting those internal parameters directly. See
-[three-stage upstream execution](upstream.md) and
+[large-scale and HPC execution](large-scale.md) and
 [SAIGE-QTL execution](saigeqtl.md).

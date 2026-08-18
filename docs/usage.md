@@ -162,8 +162,7 @@ Do not edit the workflow's committed profiles for a single installation.
 For large expression inputs, `sc-pcqtl upstream step1`, `step2`, and `step3`
 separate preparation plus pair testing, cluster calling, and cluster-PC
 phenotype construction. Each stage retains Nextflow-native parallelism and
-writes the manifest consumed by the next stage. Complete commands are provided
-in [three-stage upstream execution](upstream.md).
+writes the manifest consumed by the next stage.
 
 For large QTL scans, `sc-pcqtl saige step1`, `step2`, and `step3` similarly
 divide SAIGE-QTL work into three manifest-driven runs without changing the
@@ -171,4 +170,5 @@ statistical settings or final output tables. Complete commands and the external
 phenotype manifest schema are provided in [SAIGE-QTL execution](saigeqtl.md).
 Resource profiles, scheduler submission patterns, concurrency controls, and
 recovery procedures are covered in the dedicated
-[large-scale and HPC batch guide](large-scale.md).
+[large-scale and HPC batch guide](large-scale.md). A complete six-stage example
+is also provided in the [example documentation](../examples/README.md#run-the-complete-workflow-step-by-step).

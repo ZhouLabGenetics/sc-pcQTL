@@ -114,9 +114,9 @@ The complete analysis can be submitted as six independently resumable stages:
 See the [complete example commands](examples/README.md#run-the-complete-workflow-step-by-step).
 For production datasets, manifest interfaces, scheduler configuration,
 concurrency limits, recovery, and large-cohort batch patterns are documented
-in [large-scale and HPC execution](docs/large-scale.md). Detailed upstream and
-QTL-stage behavior is described in the [upstream](docs/upstream.md) and
-[SAIGE-QTL](docs/saigeqtl.md) guides.
+in [large-scale and HPC execution](docs/large-scale.md). SAIGE-QTL parameter
+customization and advanced stage behavior are described in the
+[SAIGE-QTL guide](docs/saigeqtl.md).
 
 ## Statistical Modes
 
@@ -138,7 +138,6 @@ within-chromosome autosomal pairs among filtered genes.
 - [Installation](docs/installation.md)
 - [Inputs and execution](docs/usage.md)
 - [Complete step-by-step example](examples/README.md#run-the-complete-workflow-step-by-step)
-- [Three-stage upstream execution](docs/upstream.md)
 - [Large-scale and HPC batch execution](docs/large-scale.md)
 - [Parameters](docs/parameters.md)
 - [Method definitions](docs/methods.md)

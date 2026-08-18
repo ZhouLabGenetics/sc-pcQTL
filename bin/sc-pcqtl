@@ -44,7 +44,8 @@ Run the upstream analysis as three independently resumable batch stages:
 Step 1 prepares each cell type and runs the parallel hurdle pair screen. Step 2
 calls local gene clusters. Step 3 constructs cluster-PC phenotypes and writes
 the standard phenotypes/qtl_tasks.tsv manifest. All stages accept --outdir and
-ordinary Nextflow options. See docs/upstream.md for complete examples.
+ordinary Nextflow options. See the complete example in examples/README.md and
+the production guidance in docs/large-scale.md.
 EOF
 }
 
