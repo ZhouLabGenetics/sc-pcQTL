@@ -10,6 +10,9 @@ run_rscript() {
   if [[ -n "${SCPCQTL_TEST_CONTAINER:-}" ]]; then
     docker run --rm -v "${root}:${root}" -v "${runtime}:${runtime}" -w "${root}" \
       "${SCPCQTL_TEST_CONTAINER}" Rscript "$@"
+  elif [[ -n "${SCPCQTL_TEST_APPTAINER_IMAGE:-}" ]]; then
+    apptainer exec --bind "${root}:${root}" --bind "${runtime}:${runtime}" \
+      "${SCPCQTL_TEST_APPTAINER_IMAGE}" Rscript "$@"
   else
     Rscript "$@"
   fi

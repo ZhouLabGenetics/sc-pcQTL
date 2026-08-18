@@ -6,16 +6,17 @@ chunks, cluster PCA tasks, and cluster-PC QTL phenotypes are scheduled as soon
 as their inputs are available. Users should not launch one workflow per gene
 pair or phenotype.
 
-For particularly large QTL scans, the recommended execution model is:
+For particularly large expression and QTL scans, the recommended execution
+model is:
 
-1. Run expression preparation, pair testing, clustering, and phenotype
-   construction once with `--run_qtl false`.
-2. Run SAIGE-QTL Step 1, Step 2, and Step 3 as separate scheduler submissions.
-3. Allow Nextflow to parallelize all manifest rows within each submission.
+1. Run preparation plus pair testing as upstream Step 1.
+2. Run cluster calling as upstream Step 2.
+3. Run cluster-PC phenotype construction as upstream Step 3.
+4. Run SAIGE-QTL Step 1, Step 2, and Step 3 as separate submissions.
+5. Allow Nextflow to parallelize all work units within each submission.
 
-The three QTL stages are sequential because each consumes the manifest written
-by the preceding stage. Within a stage, every cluster-PC phenotype is an
-independent task.
+The upstream and QTL stages are sequential because each consumes the manifest
+written by the preceding stage. Tasks within each submission remain parallel.
 
 ## Parallel units
 
@@ -159,34 +160,63 @@ analysis serially inside the launcher. Depending on local policy, run the
 Nextflow driver on a login node, a workflow node, or within a modest scheduler
 allocation that remains active until the workflow finishes.
 
-## Option 2: upstream analysis plus three QTL submissions
+## Option 2: three upstream plus three QTL submissions
 
 This mode provides explicit checkpoints and is recommended when the QTL scan
 contains many cluster-PC phenotypes or scheduler wall-time limits make one
 long-lived submission inconvenient.
 
-### A. Construct cluster-PC phenotypes
+### A. Prepare inputs and run pair tests
 
 ```bash
 SCPCQTL_RUNTIME=apptainer \
 SCPCQTL_EXTRA_PROFILES=slurm \
-sc-pcqtl run \
+sc-pcqtl upstream step1 \
   -c institutional.config \
-  -work-dir /shared/project/scpcqtl/work/upstream \
+  -work-dir /shared/project/scpcqtl/work/upstream-step1 \
   --input /shared/project/scpcqtl/input/samplesheet.csv \
   --gene_annotation /shared/project/scpcqtl/input/genes.tsv \
-  --run_qtl false \
   --outdir /shared/project/scpcqtl/results/analysis \
   -resume
 ```
 
-The required QTL input is then available at:
+### B. Call local clusters
+
+Run this stage after `upstream/manifests/step1.tsv` is present:
+
+```bash
+SCPCQTL_RUNTIME=apptainer \
+SCPCQTL_EXTRA_PROFILES=slurm \
+sc-pcqtl upstream step2 \
+  -c institutional.config \
+  -work-dir /shared/project/scpcqtl/work/upstream-step2 \
+  --upstream_step1_manifest /shared/project/scpcqtl/results/analysis/upstream/manifests/step1.tsv \
+  --outdir /shared/project/scpcqtl/results/analysis \
+  -resume
+```
+
+### C. Construct cluster-PC phenotypes
+
+Run this stage after `upstream/manifests/step2.tsv` is present:
+
+```bash
+SCPCQTL_RUNTIME=apptainer \
+SCPCQTL_EXTRA_PROFILES=slurm \
+sc-pcqtl upstream step3 \
+  -c institutional.config \
+  -work-dir /shared/project/scpcqtl/work/upstream-step3 \
+  --upstream_step2_manifest /shared/project/scpcqtl/results/analysis/upstream/manifests/step2.tsv \
+  --outdir /shared/project/scpcqtl/results/analysis \
+  -resume
+```
+
+The QTL input is now available at:
 
 ```text
 /shared/project/scpcqtl/results/analysis/phenotypes/qtl_tasks.tsv
 ```
 
-### B. Fit SAIGE-QTL null models
+### D. Fit SAIGE-QTL null models
 
 ```bash
 SCPCQTL_RUNTIME=apptainer \
@@ -205,7 +235,7 @@ variance-ratio marker set is unavailable, provide the chromosome-template
 `--genotype_prefix` instead; the workflow will construct the marker set before
 the null-model tasks begin.
 
-### C. Run regional association tests
+### E. Run regional association tests
 
 Run this stage only after Step 1 has written `qtl/manifests/step1.tsv`:
 
@@ -223,7 +253,7 @@ sc-pcqtl saige step2 \
 
 Step 2 launches one regional association task per completed Step 1 row.
 
-### D. Calculate regional results and summaries
+### F. Calculate regional results and summaries
 
 Run this stage only after Step 2 has written `qtl/manifests/step2.tsv`:
 
@@ -243,20 +273,24 @@ QTL summary tables. The staged analysis therefore produces the same statistical
 outputs as the end-to-end QTL path while retaining intermediate null models and
 stage manifests.
 
-The full manifest schemas and parameter-ownership rules are documented in
-[SAIGE-QTL execution and customization](saigeqtl.md).
+Upstream manifests and parameter ownership are documented in
+[three-stage upstream execution](upstream.md). QTL manifest schemas are
+documented in [SAIGE-QTL execution and customization](saigeqtl.md).
 
 ## Scheduler submission pattern
 
-Each command above is a Nextflow driver, not an individual phenotype job. If a
-site requires the driver itself to run through Slurm, place one command in a
-small driver script and submit it with `sbatch`. The three SAIGE-QTL drivers can
-be chained with `afterok` dependencies:
+Each command above is a Nextflow driver, not an individual task. If a site
+requires the driver itself to run through Slurm, place one command in a small
+driver script and submit it with `sbatch`. All six drivers can be chained with
+`afterok` dependencies:
 
 ```bash
-step1_job=$(sbatch --parsable run_saige_step1.sh)
-step2_job=$(sbatch --parsable --dependency="afterok:${step1_job}" run_saige_step2.sh)
-sbatch --dependency="afterok:${step2_job}" run_saige_step3.sh
+upstream1_job=$(sbatch --parsable run_upstream_step1.sh)
+upstream2_job=$(sbatch --parsable --dependency="afterok:${upstream1_job}" run_upstream_step2.sh)
+upstream3_job=$(sbatch --parsable --dependency="afterok:${upstream2_job}" run_upstream_step3.sh)
+saige1_job=$(sbatch --parsable --dependency="afterok:${upstream3_job}" run_saige_step1.sh)
+saige2_job=$(sbatch --parsable --dependency="afterok:${saige1_job}" run_saige_step2.sh)
+sbatch --dependency="afterok:${saige2_job}" run_saige_step3.sh
 ```
 
 Each driver subsequently submits its phenotype-level jobs through the Slurm
@@ -286,10 +320,11 @@ throttling.
 
 ### Storage
 
+Upstream Step 1 publishes prepared expression blocks needed by Steps 2 and 3.
 Standalone SAIGE-QTL stages publish null models and other intermediates needed
-by later stages. Estimate storage from a pilot subset before launching the full
-manifest. Keep the Nextflow work directory until the complete analysis and QC
-are finished; `nextflow clean` removes cached files required by `-resume`.
+by later stages. Estimate both from a pilot subset before launching the full
+analysis. Keep the Nextflow work directories until analysis and QC are
+finished; `nextflow clean` removes cached files required by `-resume`.
 
 ## Monitoring and recovery
 
@@ -300,9 +335,12 @@ squeue -u "$USER"
 ```
 
 Each run writes an execution trace, HTML report, timeline, and DAG under
-`pipeline_info/`. Independent QTL stages use separate directories:
+`pipeline_info/`. Independent stages use separate directories:
 
 ```text
+pipeline_info/upstream_step1/
+pipeline_info/upstream_step2/
+pipeline_info/upstream_step3/
 pipeline_info/saige_step1/
 pipeline_info/saige_step2/
 pipeline_info/saige_step3/

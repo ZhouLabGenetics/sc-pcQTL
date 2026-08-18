@@ -14,6 +14,9 @@ Usage:
   sc-pcqtl doctor [--deep]
   sc-pcqtl example [Nextflow options]
   sc-pcqtl run [pipeline parameters]
+  sc-pcqtl upstream step1 [parameters]
+  sc-pcqtl upstream step2 [parameters]
+  sc-pcqtl upstream step3 [parameters]
   sc-pcqtl saige step1 [parameters]
   sc-pcqtl saige step2 [parameters]
   sc-pcqtl saige step3 [parameters]
@@ -27,6 +30,21 @@ Environment overrides:
   SCPCQTL_NEXTFLOW  Nextflow executable
   SCPCQTL_EXTRA_PROFILES  Additional profiles, for example slurm or sge
   SCPCQTL_SMOKE_IMAGE  Small image used by doctor --deep
+EOF
+}
+
+upstream_usage() {
+  cat <<'EOF'
+Run the upstream analysis as three independently resumable batch stages:
+
+  sc-pcqtl upstream step1 --input PATH --gene_annotation PATH
+  sc-pcqtl upstream step2 --upstream_step1_manifest PATH
+  sc-pcqtl upstream step3 --upstream_step2_manifest PATH
+
+Step 1 prepares each cell type and runs the parallel hurdle pair screen. Step 2
+calls local gene clusters. Step 3 constructs cluster-PC phenotypes and writes
+the standard phenotypes/qtl_tasks.tsv manifest. All stages accept --outdir and
+ordinary Nextflow options. See docs/upstream.md for complete examples.
 EOF
 }
 
@@ -287,23 +305,27 @@ print_run() {
 run_pipeline() {
   local mode=$1
   shift
-  local runtime profiles entry execution_name
+  local runtime profiles execution_stage execution_name publish_flag
   local -a command_args
   runtime=$(select_runtime)
   profiles=$runtime
   [[ "$mode" == 'example' ]] && profiles="${runtime},example"
-  entry=''
+  execution_stage='default'
   execution_name=''
+  publish_flag=''
   case "$mode" in
-    saige_step1) entry=SAIGE_STEP1; execution_name=saige_step1 ;;
-    saige_step2) entry=SAIGE_STEP2; execution_name=saige_step2 ;;
-    saige_step3) entry=SAIGE_STEP3; execution_name=saige_step3 ;;
+    upstream_step1) execution_stage=upstream_step1; execution_name=upstream_step1; publish_flag=publish_upstream_intermediates ;;
+    upstream_step2) execution_stage=upstream_step2; execution_name=upstream_step2; publish_flag=publish_upstream_intermediates ;;
+    upstream_step3) execution_stage=upstream_step3; execution_name=upstream_step3; publish_flag=publish_upstream_intermediates ;;
+    saige_step1) execution_stage=saige_step1; execution_name=saige_step1; publish_flag=publish_saige_intermediates ;;
+    saige_step2) execution_stage=saige_step2; execution_name=saige_step2; publish_flag=publish_saige_intermediates ;;
+    saige_step3) execution_stage=saige_step3; execution_name=saige_step3; publish_flag=publish_saige_intermediates ;;
   esac
   if [[ -n "$execution_name" ]]; then
     for argument in "$@"; do
       case "$argument" in
-        --execution_name|--execution_name=*|--publish_saige_intermediates|--publish_saige_intermediates=*)
-          die 'execution_name and publish_saige_intermediates are managed by sc-pcqtl saige'
+        --execution_stage|--execution_stage=*|--execution_name|--execution_name=*|--publish_saige_intermediates|--publish_saige_intermediates=*|--publish_upstream_intermediates|--publish_upstream_intermediates=*)
+          die 'execution_stage, execution_name, and staged-publication parameters are managed by sc-pcqtl'
           ;;
       esac
     done
@@ -320,10 +342,9 @@ run_pipeline() {
   if [[ ! -d "$pipeline" && -n "$revision" ]]; then
     command_args+=(-r "$revision")
   fi
-  [[ -z "$entry" ]] || command_args+=(-entry "$entry")
   command_args+=(-profile "$profiles")
   if [[ -n "$execution_name" ]]; then
-    command_args+=(--execution_name "$execution_name" --publish_saige_intermediates true)
+    command_args+=(--execution_stage "$execution_stage" --execution_name "$execution_name" "--${publish_flag}" true)
   fi
   exec "$nextflow_bin" "${command_args[@]}" "$@"
 }
@@ -334,6 +355,21 @@ case "$command_name" in
   doctor) doctor "$@" ;;
   example) run_pipeline example "$@" ;;
   run) run_pipeline run "$@" ;;
+  upstream)
+    stage=${1:-help}
+    [[ $# -eq 0 ]] || shift
+    case "$stage" in
+      step1|step2|step3)
+        if [[ "${1:-}" == '--help' || "${1:-}" == '-h' ]]; then
+          upstream_usage
+        else
+          run_pipeline "upstream_${stage}" "$@"
+        fi
+        ;;
+      help|--help|-h) upstream_usage ;;
+      *) upstream_usage >&2; die "unknown upstream stage: $stage" ;;
+    esac
+    ;;
   saige)
     stage=${1:-help}
     [[ $# -eq 0 ]] || shift

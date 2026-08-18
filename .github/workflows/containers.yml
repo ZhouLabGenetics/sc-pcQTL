@@ -109,16 +109,16 @@ jobs:
           common=(--core_container "ghcr.io/zhoulabgenetics/sc-pcqtl-core:${version}"
                   --saige_container "ghcr.io/zhoulabgenetics/sc-pcqtl-saigeqtl:${version}"
                   --outdir results/release-example)
-          nextflow run . -entry SAIGE_STEP1 -profile docker,example -ansi-log false \
-            --execution_name saige_step1 --publish_saige_intermediates true \
+          nextflow run . -profile docker,example -ansi-log false \
+            --execution_stage saige_step1 --execution_name saige_step1 --publish_saige_intermediates true \
             --qtl_manifest results/release-example/phenotypes/qtl_tasks.tsv \
             --variance_ratio_prefix "$PWD/examples/variance_ratio" "${common[@]}"
-          nextflow run . -entry SAIGE_STEP2 -profile docker,example -ansi-log false \
-            --execution_name saige_step2 --publish_saige_intermediates true \
+          nextflow run . -profile docker,example -ansi-log false \
+            --execution_stage saige_step2 --execution_name saige_step2 --publish_saige_intermediates true \
             --step1_manifest results/release-example/qtl/manifests/step1.tsv \
             --genotype_prefix "$PWD/examples/genotype_chr{chr}" "${common[@]}"
-          nextflow run . -entry SAIGE_STEP3 -profile docker,example -ansi-log false \
-            --execution_name saige_step3 --publish_saige_intermediates true \
+          nextflow run . -profile docker,example -ansi-log false \
+            --execution_stage saige_step3 --execution_name saige_step3 --publish_saige_intermediates true \
             --step2_manifest results/release-example/qtl/manifests/step2.tsv \
             "${common[@]}"
           test -s results/release-example/qtl/manifests/step3.tsv

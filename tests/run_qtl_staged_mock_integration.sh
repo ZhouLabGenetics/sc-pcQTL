@@ -33,18 +33,18 @@ common=(nextflow run "${root}" -profile "${profile}" -ansi-log false)
   --run_qtl true --genotype_prefix "${runtime}/genotype_chr{chr}" \
   --variance_ratio_prefix "${runtime}/vr" "$@"
 
-"${common[@]}" -entry SAIGE_STEP1 -work-dir "${runtime}/work_step1" \
-  --outdir "${runtime}/staged" --execution_name saige_step1 \
+"${common[@]}" -work-dir "${runtime}/work_step1" \
+  --outdir "${runtime}/staged" --execution_stage saige_step1 --execution_name saige_step1 \
   --publish_saige_intermediates true \
   --qtl_manifest "${runtime}/full/phenotypes/qtl_tasks.tsv" \
   --variance_ratio_prefix "${runtime}/vr" "$@"
-"${common[@]}" -entry SAIGE_STEP2 -work-dir "${runtime}/work_step2" \
-  --outdir "${runtime}/staged" --execution_name saige_step2 \
+"${common[@]}" -work-dir "${runtime}/work_step2" \
+  --outdir "${runtime}/staged" --execution_stage saige_step2 --execution_name saige_step2 \
   --publish_saige_intermediates true \
   --step1_manifest "${runtime}/staged/qtl/manifests/step1.tsv" \
   --genotype_prefix "${runtime}/genotype_chr{chr}" "$@"
-"${common[@]}" -entry SAIGE_STEP3 -work-dir "${runtime}/work_step3" \
-  --outdir "${runtime}/staged" --execution_name saige_step3 \
+"${common[@]}" -work-dir "${runtime}/work_step3" \
+  --outdir "${runtime}/staged" --execution_stage saige_step3 --execution_name saige_step3 \
   --publish_saige_intermediates true \
   --step2_manifest "${runtime}/staged/qtl/manifests/step2.tsv" "$@"
 
@@ -54,8 +54,8 @@ run_rscript "${root}/tests/assert_staged_qtl_outputs.R" "${runtime}/full" "${run
 manifest_dir="${runtime}/full/phenotypes"
 awk -F'\t' 'BEGIN{OFS="\t"} NR==1 {$7=""} {print}' \
   "${manifest_dir}/qtl_tasks.tsv" > "${manifest_dir}/invalid_missing_column.tsv"
-if "${common[@]}" -entry SAIGE_STEP1 -work-dir "${runtime}/work_invalid_column" \
-  --outdir "${runtime}/invalid_column" --execution_name saige_step1 \
+if "${common[@]}" -work-dir "${runtime}/work_invalid_column" \
+  --outdir "${runtime}/invalid_column" --execution_stage saige_step1 --execution_name saige_step1 \
   --publish_saige_intermediates true \
   --qtl_manifest "${manifest_dir}/invalid_missing_column.tsv" \
   --variance_ratio_prefix "${runtime}/vr" >/dev/null 2>&1; then
@@ -65,8 +65,8 @@ fi
 
 awk 'NR==1 {print} NR==2 {print; print; exit}' \
   "${manifest_dir}/qtl_tasks.tsv" > "${manifest_dir}/invalid_duplicate_task.tsv"
-if "${common[@]}" -entry SAIGE_STEP1 -work-dir "${runtime}/work_invalid_duplicate" \
-  --outdir "${runtime}/invalid_duplicate" --execution_name saige_step1 \
+if "${common[@]}" -work-dir "${runtime}/work_invalid_duplicate" \
+  --outdir "${runtime}/invalid_duplicate" --execution_stage saige_step1 --execution_name saige_step1 \
   --publish_saige_intermediates true \
   --qtl_manifest "${manifest_dir}/invalid_duplicate_task.tsv" \
   --variance_ratio_prefix "${runtime}/vr" >/dev/null 2>&1; then

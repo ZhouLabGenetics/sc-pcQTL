@@ -100,6 +100,12 @@ one explicitly. Run `sc-pcqtl run --help` for a concise workflow summary.
 Direct `nextflow run` commands remain supported for advanced and institutional
 deployments.
 
+For large inputs, the expression-to-phenotype workflow can be submitted as
+three independent stages with `sc-pcqtl upstream step1`, `step2`, and `step3`.
+Step 1 combines cell-type preparation with the parallel hurdle pair screen;
+Steps 2 and 3 call clusters and construct cluster-PC phenotypes. See the
+[three-stage upstream guide](docs/upstream.md).
+
 SAIGE-QTL can optionally be submitted as three independent batch stages with
 `sc-pcqtl saige step1`, `step2`, and `step3`. This is useful when null-model
 fitting, association testing, and regional aggregation require separate HPC
@@ -126,6 +132,7 @@ within-chromosome autosomal pairs among filtered genes.
 
 - [Installation](docs/installation.md)
 - [Inputs and execution](docs/usage.md)
+- [Three-stage upstream execution](docs/upstream.md)
 - [Large-scale and HPC batch execution](docs/large-scale.md)
 - [Parameters](docs/parameters.md)
 - [Method definitions](docs/methods.md)

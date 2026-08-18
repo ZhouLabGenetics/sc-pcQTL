@@ -16,7 +16,7 @@ jobs:
           java-version: '17'
       - name: Validate portable installer and launcher
         run: |
-          bash -n install.sh bin/sc-pcqtl bin/run_saige_step1.sh bin/run_saige_step2.sh bin/run_saige_step3.sh tests/test_installer.sh tests/test_installer_download.sh tests/test_clean_host_install.sh tests/test_launcher.sh tests/test_container_override.sh tests/test_hpc_tmpdir.sh tests/test_resume_reports.sh tests/run_qtl_staged_mock_integration.sh
+          bash -n install.sh bin/sc-pcqtl bin/run_saige_step1.sh bin/run_saige_step2.sh bin/run_saige_step3.sh tests/test_installer.sh tests/test_installer_download.sh tests/test_clean_host_install.sh tests/test_launcher.sh tests/test_container_override.sh tests/test_hpc_tmpdir.sh tests/test_resume_reports.sh tests/run_core_integration.sh tests/run_upstream_staged_integration.sh tests/run_qtl_staged_mock_integration.sh
           bash install.sh --help >/dev/null
           tests/test_installer.sh
           tests/test_installer_download.sh
@@ -103,6 +103,11 @@ jobs:
           SCPCQTL_TEST_PROFILE: test,docker
           SCPCQTL_TEST_CONTAINER: sc-pcqtl-core:test
         run: tests/run_core_integration.sh --core_container sc-pcqtl-core:test
+      - name: Staged upstream integration test
+        env:
+          SCPCQTL_TEST_PROFILE: test,docker
+          SCPCQTL_TEST_CONTAINER: sc-pcqtl-core:test
+        run: tests/run_upstream_staged_integration.sh --core_container sc-pcqtl-core:test
       - name: Build mock SAIGE-QTL test image
         run: |
           docker build \

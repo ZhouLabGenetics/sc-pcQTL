@@ -5,7 +5,7 @@ process CALL_CLUSTERS {
         saveAs: { name -> name == "${celltype}_clusters" ? celltype : name }
 
     input:
-    tuple val(celltype), path(pair_dir), path(stage)
+    tuple val(celltype), path(pair_dir, stageAs: 'pair_dir'), path(stage, stageAs: 'prepared_dir')
     path workflow_bin
 
     output:

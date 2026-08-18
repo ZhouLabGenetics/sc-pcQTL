@@ -5,7 +5,8 @@ process RUN_CLUSTER_PCA {
         saveAs: { name -> name == "${celltype}_pca" ? celltype : name }
 
     input:
-    tuple val(celltype), path(cluster_dir), path(stage), path(counts)
+    tuple val(celltype), path(cluster_dir, stageAs: 'cluster_dir'),
+          path(stage, stageAs: 'prepared_dir'), path(counts)
     path workflow_bin
 
     output:

@@ -7,6 +7,9 @@ process PREPARE_CELLTYPE {
             def prefix = "${celltype}__"
             return name.startsWith(prefix) ? "${celltype}/${name.substring(prefix.size())}" : name
         }
+    publishDir "${params.outdir}/upstream/step1/prepared", mode: 'copy', overwrite: true,
+        enabled: params.publish_upstream_intermediates.toString().toBoolean(),
+        saveAs: { name -> name == "${celltype}_stage" ? celltype : null }
 
     input:
     tuple val(celltype), path(counts)

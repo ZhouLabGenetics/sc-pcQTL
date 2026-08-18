@@ -2,7 +2,7 @@ process RUN_SAIGE_STEP1 {
     tag "$celltype:$cluster_id:$phenotype_id"
     label 'process_qtl'
     publishDir "${params.outdir}/qtl/step1", mode: 'copy', overwrite: true,
-        enabled: params.publish_saige_intermediates
+        enabled: params.publish_saige_intermediates.toString().toBoolean()
 
     input:
     tuple val(task_id), val(celltype), val(cluster_id), val(phenotype_id), val(chromosome),

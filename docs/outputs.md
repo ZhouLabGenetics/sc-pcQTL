@@ -7,6 +7,8 @@ results/
   clusters/<celltype>/
   phenotypes/<celltype>/
   phenotypes/qtl_tasks.tsv
+  upstream/step1/prepared/<celltype>/
+  upstream/manifests/
   qtl/step1/<task>/
   qtl/tasks/<celltype>__<cluster>__<PC>/
   qtl/manifests/
@@ -60,6 +62,13 @@ estimates under `qtl/step1/<task>/` and writes `step1.tsv`, `step2.tsv`, and
 keeps null models in the Nextflow work directory rather than duplicating these
 large intermediates in the result directory.
 
+Three-stage upstream execution publishes reusable prepared cell-type data under
+`upstream/step1/prepared/<celltype>/` and writes `step1.tsv`, `step2.tsv`, and
+`step3.tsv` under `upstream/manifests/`. These manifests carry validated paths
+from preparation and pair testing to cluster calling and then cluster-PC
+phenotype construction. The default end-to-end command does not duplicate the
+prepared data under `upstream/`.
+
 `pipeline_info/` contains `analysis_parameters.json`, the normalized
 `validated_samplesheet.csv`, the resolved SAIGE-QTL table, trace, report,
 timeline, DAG, and any auto-generated variance-ratio marker set.
@@ -75,3 +84,6 @@ Independent QTL stages use separate provenance directories:
 `pipeline_info/saige_step1/`, `pipeline_info/saige_step2/`, and
 `pipeline_info/saige_step3/`. Running one stage therefore does not overwrite
 the report, trace, timeline, or metadata from another stage.
+
+Independent upstream stages likewise use `pipeline_info/upstream_step1/`,
+`pipeline_info/upstream_step2/`, and `pipeline_info/upstream_step3/`.

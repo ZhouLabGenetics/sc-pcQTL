@@ -13,6 +13,7 @@ include { RUN_SAIGE_STEP1 }               from './modules/local/run_saige_step1'
 include { RUN_SAIGE_STEP2 }               from './modules/local/run_saige_step2'
 include { RUN_SAIGE_STEP3 }               from './modules/local/run_saige_step3'
 include { WRITE_SAIGE_STAGE_MANIFEST }    from './modules/local/write_saige_stage_manifest'
+include { WRITE_UPSTREAM_STAGE_MANIFEST } from './modules/local/write_upstream_stage_manifest'
 include { COLLECT_QTL_RESULTS }           from './modules/local/collect_qtl_results'
 include { WRITE_RUN_METADATA }            from './modules/local/write_run_metadata'
 include { VALIDATE_SAMPLESHEET }          from './modules/local/validate_samplesheet'
@@ -23,6 +24,14 @@ def requireParam(name, value) {
     }
 }
 
+def booleanParam(name, value) {
+    if (value instanceof Boolean) return value
+    def normalized = value?.toString()?.trim()?.toLowerCase()
+    if (normalized == 'true') return true
+    if (normalized == 'false') return false
+    error "--${name} must be true or false; received '${value}'"
+}
+
 def requireGenotypePrefix(value) {
     requireParam('genotype_prefix', value)
     if (!value.toString().contains('{chr}')) {
@@ -31,8 +40,16 @@ def requireGenotypePrefix(value) {
 }
 
 def requireStageExecution(stageName) {
-    if (params.execution_name != stageName || !params.publish_saige_intermediates) {
+    if (params.execution_name != stageName ||
+        !booleanParam('publish_saige_intermediates', params.publish_saige_intermediates)) {
         error "${stageName} must set --execution_name ${stageName} and --publish_saige_intermediates true; use sc-pcqtl saige"
+    }
+}
+
+def requireUpstreamStageExecution(stageName) {
+    if (params.execution_name != stageName ||
+        !booleanParam('publish_upstream_intermediates', params.publish_upstream_intermediates)) {
+        error "${stageName} must set --execution_name ${stageName} and --publish_upstream_intermediates true; use sc-pcqtl upstream"
     }
 }
 
@@ -59,6 +76,9 @@ Core options:
 
 SAIGE-QTL can also be run as three independent manifest-driven stages with
 sc-pcqtl saige step1, step2, and step3.
+
+The upstream analysis can be run as three independent stages with sc-pcqtl
+upstream step1, step2, and step3.
 
 Documentation: https://github.com/ZhouLabGenetics/sc-pcQTL
 '''.stripIndent()
@@ -203,6 +223,93 @@ def parseSaigeManifest(manifestInput, stage) {
     rows
 }
 
+def resolveManifestDirectory(manifestFile, rawValue, column, rowNumber, requiredFiles) {
+    def value = rawValue?.toString()?.trim()
+    if (!value) error "Manifest row ${rowNumber} has an empty ${column}"
+    if (value.contains('\t') || value.contains('\n') || value.contains('\r')) {
+        error "Manifest row ${rowNumber} has an invalid ${column} path"
+    }
+    def path = java.nio.file.Paths.get(value)
+    if (!path.isAbsolute()) path = manifestFile.parent.resolve(path)
+    path = path.toAbsolutePath().normalize()
+    if (!java.nio.file.Files.isDirectory(path)) {
+        error "Manifest row ${rowNumber} references a missing ${column}: ${path}"
+    }
+    requiredFiles.each { filename ->
+        def requiredPath = path.resolve(filename)
+        if (!java.nio.file.Files.isRegularFile(requiredPath) ||
+            java.nio.file.Files.size(requiredPath) == 0L) {
+            error "Manifest row ${rowNumber} ${column} is missing ${filename}: ${path}"
+        }
+    }
+    path.toString()
+}
+
+def parseUpstreamManifest(manifestInput, stage) {
+    def manifestFile = manifestInput.toAbsolutePath().normalize()
+    def lines = manifestFile.readLines().findAll { line -> line.trim() }
+    if (!lines) error "${stage} manifest must contain a header: ${manifestFile}"
+    def header = lines[0].replaceAll('\\r$', '').split('\t', -1) as List
+    if (header.size() != header.unique().size()) error "${stage} manifest has duplicate column names"
+
+    def columnsByStage = [
+        step1: ['celltype', 'counts_file', 'prepared_dir', 'pair_dir',
+                'step1_parameters_file'],
+        step2: ['celltype', 'counts_file', 'prepared_dir', 'pair_dir',
+                'cluster_dir', 'step1_parameters_file', 'step2_parameters_file']
+    ]
+    if (!columnsByStage.containsKey(stage)) error "Unsupported upstream manifest type: ${stage}"
+    def required = columnsByStage[stage]
+    def missing = required.findAll { column -> !header.contains(column) }
+    if (missing) error "${stage} manifest is missing columns: ${missing.join(', ')}"
+
+    def rows = []
+    lines.drop(1).eachWithIndex { line, index ->
+        def rowNumber = index + 2
+        def values = line.replaceAll('\\r$', '').split('\t', -1) as List
+        if (values.size() != header.size()) {
+            error "${stage} manifest row ${rowNumber} has ${values.size()} fields; expected ${header.size()}"
+        }
+        def row = [header, values].transpose().collectEntries()
+        if (!(row.celltype ==~ /[A-Za-z0-9][A-Za-z0-9_.-]*/)) {
+            error "${stage} manifest row ${rowNumber} has an unsafe celltype: ${row.celltype}"
+        }
+        row.counts_file = resolveManifestPath(manifestFile, row.counts_file, 'counts_file', rowNumber)
+        row.prepared_dir = resolveManifestDirectory(
+            manifestFile, row.prepared_dir, 'prepared_dir', rowNumber,
+            ['celltype_qc.tsv', 'gene_filtering.tsv', 'count_blocks.tsv', 'covariates.rds', 'COMPLETE'])
+        row.pair_dir = resolveManifestDirectory(
+            manifestFile, row.pair_dir, 'pair_dir', rowNumber,
+            ['all_computed_pairs.tsv.gz', 'significant_pairs.tsv.gz', 'pair_summary.tsv'])
+        row.step1_parameters_file = resolveManifestPath(
+            manifestFile, row.step1_parameters_file, 'step1_parameters_file', rowNumber)
+        if (stage == 'step2') {
+            row.cluster_dir = resolveManifestDirectory(
+                manifestFile, row.cluster_dir, 'cluster_dir', rowNumber,
+                ['clusters.tsv', 'cluster_genes.tsv', 'cluster_summary.tsv'])
+            row.step2_parameters_file = resolveManifestPath(
+                manifestFile, row.step2_parameters_file, 'step2_parameters_file', rowNumber)
+        }
+        rows << row
+    }
+    def duplicates = rows.groupBy { row -> row.celltype }
+        .findAll { _celltype, members -> members.size() > 1 }.keySet()
+    if (duplicates) error "${stage} manifest has duplicate celltype values: ${duplicates.sort().join(', ')}"
+    rows
+}
+
+def requireUpstreamParameterMatch(rows, parameterFileColumn, parameterName, currentValue, stage) {
+    rows.collect { row -> row[parameterFileColumn] }.unique().each { pathString ->
+        def stored = new groovy.json.JsonSlurper().parse(new File(pathString))
+        if (!stored.containsKey(parameterName)) {
+            error "${stage} source parameters do not contain ${parameterName}: ${pathString}"
+        }
+        if (stored[parameterName]?.toString() != currentValue?.toString()) {
+            error "${stage} requires --${parameterName} '${stored[parameterName]}' to match the preceding stage; received '${currentValue}'"
+        }
+    }
+}
+
 def runMetadata(parameters, workflowContext, entryName) {
     def metadata = new LinkedHashMap(parameters)
     metadata.workflow_version = workflowContext.manifest.version
@@ -225,6 +332,141 @@ def runMetadata(parameters, workflowContext, entryName) {
         saigeqtl: metadata.get('saige_container')?.toString()
     ]
     metadata
+}
+
+workflow UPSTREAM_STEP1 {
+    requireUpstreamStageExecution('upstream_step1')
+    requireParam('input', params.input)
+    requireParam('gene_annotation', params.gene_annotation)
+    if (!params.pair_scope.toString().matches('fast|complete')) error 'pair_scope must be fast or complete'
+    if (!params.pair_test.toString().matches('component_union|joint_score')) error 'pair_test must be component_union or joint_score'
+    if (!params.count_family.toString().matches('poisson|negative_binomial')) error 'count_family must be poisson or negative_binomial'
+    if (params.pair_test == 'joint_score' && params.count_family != 'poisson') {
+        error 'joint_score currently requires --count_family poisson'
+    }
+
+    inputFile = file(params.input, checkIfExists: true)
+    annotation = channel.value(file(params.gene_annotation, checkIfExists: true))
+    workflowBin = channel.value(file("${projectDir}/bin", checkIfExists: true))
+    VALIDATE_SAMPLESHEET(channel.value(inputFile), inputFile.parent.toString(), workflowBin)
+    samples = VALIDATE_SAMPLESHEET.out.samplesheet
+        .splitCsv(header: true, quote: '"')
+        .map { row ->
+            def celltype = row.get('celltype')
+            def counts = row.get('counts')
+            if (!celltype || !counts) error "Validated samplesheet row lacks celltype/counts fields: ${row}"
+            tuple(celltype.toString(), file(counts.toString(), checkIfExists: true))
+        }
+    sampleCounts = samples.map { celltype, counts -> tuple(celltype, counts) }
+
+    WRITE_RUN_METADATA(channel.value(runMetadata(params, workflow, 'UPSTREAM_STEP1')))
+    PREPARE_CELLTYPE(samples, annotation, workflowBin)
+    PLAN_PAIR_TASKS(PREPARE_CELLTYPE.out.stage, workflowBin)
+    pairRows = PLAN_PAIR_TASKS.out.tasks.flatMap { celltype, taskFile -> parseTaskTable(taskFile, celltype) }
+    pairInputs = pairRows.combine(PREPARE_CELLTYPE.out.stage, by: 0)
+    RUN_PAIR_TASK(pairInputs, workflowBin)
+    pairGroups = RUN_PAIR_TASK.out.result
+        .map { celltype, _taskId, result -> tuple(celltype, result) }
+        .groupTuple()
+        .join(PREPARE_CELLTYPE.out.stage)
+    MERGE_PAIR_TASKS(pairGroups, workflowBin)
+
+    def publishedRoot = new File(params.outdir.toString()).absolutePath
+    def step1Parameters = new File(
+        publishedRoot, 'pipeline_info/upstream_step1/analysis_parameters.json').absolutePath
+    completedRows = MERGE_PAIR_TASKS.out.pairs
+        .join(PREPARE_CELLTYPE.out.stage)
+        .join(sampleCounts)
+        .map { celltype, _pairDir, _preparedDir, counts ->
+            tuple(celltype, counts.toAbsolutePath().toString(),
+                  new File(publishedRoot, "upstream/step1/prepared/${celltype}").absolutePath,
+                  new File(publishedRoot, "pairs/${celltype}").absolutePath,
+                  step1Parameters)
+        }
+        .collect(flat: false)
+    WRITE_UPSTREAM_STAGE_MANIFEST(
+        channel.value('step1'), completedRows, WRITE_RUN_METADATA.out.parameters)
+}
+
+workflow UPSTREAM_STEP2 {
+    requireUpstreamStageExecution('upstream_step2')
+    requireParam('upstream_step1_manifest', params.upstream_step1_manifest)
+    if (params.min_cluster_genes as Integer > params.max_cluster_genes as Integer) {
+        error 'min_cluster_genes cannot exceed max_cluster_genes'
+    }
+
+    manifestFile = file(params.upstream_step1_manifest, checkIfExists: true)
+    rows = parseUpstreamManifest(manifestFile, 'step1')
+    requireUpstreamParameterMatch(
+        rows, 'step1_parameters_file', 'max_cluster_genes', params.max_cluster_genes, 'upstream step2')
+    workflowBin = channel.value(file("${projectDir}/bin", checkIfExists: true))
+    WRITE_RUN_METADATA(channel.value(runMetadata(params, workflow, 'UPSTREAM_STEP2')))
+
+    clusterInputs = channel.fromList(rows).map { row ->
+        tuple(row.celltype,
+              file(row.pair_dir, checkIfExists: true),
+              file(row.prepared_dir, checkIfExists: true))
+    }
+    rowMetadata = channel.fromList(rows).map { row ->
+        tuple(row.celltype, row.counts_file, row.prepared_dir, row.pair_dir,
+              row.step1_parameters_file)
+    }
+    CALL_CLUSTERS(clusterInputs, workflowBin)
+
+    def publishedRoot = new File(params.outdir.toString()).absolutePath
+    def step2Parameters = new File(
+        publishedRoot, 'pipeline_info/upstream_step2/analysis_parameters.json').absolutePath
+    completedRows = CALL_CLUSTERS.out.clusters
+        .join(rowMetadata)
+        .map { celltype, _clusterDir, countsFile, preparedDir, pairDir, step1Parameters ->
+            tuple(celltype, countsFile, preparedDir, pairDir,
+                  new File(publishedRoot, "clusters/${celltype}").absolutePath,
+                  step1Parameters, step2Parameters)
+        }
+        .collect(flat: false)
+    WRITE_UPSTREAM_STAGE_MANIFEST(
+        channel.value('step2'), completedRows, WRITE_RUN_METADATA.out.parameters)
+}
+
+workflow UPSTREAM_STEP3 {
+    requireUpstreamStageExecution('upstream_step3')
+    requireParam('upstream_step2_manifest', params.upstream_step2_manifest)
+
+    manifestFile = file(params.upstream_step2_manifest, checkIfExists: true)
+    rows = parseUpstreamManifest(manifestFile, 'step2')
+    requireUpstreamParameterMatch(
+        rows, 'step1_parameters_file', 'covariates', params.covariates, 'upstream step3')
+    workflowBin = channel.value(file("${projectDir}/bin", checkIfExists: true))
+    WRITE_RUN_METADATA(channel.value(runMetadata(params, workflow, 'UPSTREAM_STEP3')))
+
+    pcaInputs = channel.fromList(rows).map { row ->
+        tuple(row.celltype,
+              file(row.cluster_dir, checkIfExists: true),
+              file(row.prepared_dir, checkIfExists: true),
+              file(row.counts_file, checkIfExists: true))
+    }
+    rowMetadata = channel.fromList(rows).map { row ->
+        tuple(row.celltype, row.counts_file, row.prepared_dir, row.pair_dir,
+              row.cluster_dir, row.step1_parameters_file, row.step2_parameters_file)
+    }
+    RUN_CLUSTER_PCA(pcaInputs, workflowBin)
+    pcaDirectories = RUN_CLUSTER_PCA.out.pca.map { _celltype, pcaDir -> pcaDir }.collect()
+    COLLECT_QTL_TASKS(pcaDirectories, workflowBin)
+
+    def publishedRoot = new File(params.outdir.toString()).absolutePath
+    def step3Parameters = new File(
+        publishedRoot, 'pipeline_info/upstream_step3/analysis_parameters.json').absolutePath
+    completedRows = RUN_CLUSTER_PCA.out.pca
+        .join(rowMetadata)
+        .map { celltype, _pcaDir, countsFile, preparedDir, pairDir, clusterDir,
+               step1Parameters, step2Parameters ->
+            tuple(celltype, countsFile, preparedDir, pairDir, clusterDir,
+                  new File(publishedRoot, "phenotypes/${celltype}").absolutePath,
+                  step1Parameters, step2Parameters, step3Parameters)
+        }
+        .collect(flat: false)
+    WRITE_UPSTREAM_STAGE_MANIFEST(
+        channel.value('step3'), completedRows, WRITE_RUN_METADATA.out.parameters)
 }
 
 workflow SAIGE_STEP1 {
@@ -324,8 +566,9 @@ workflow SAIGE_STEP3 {
     COLLECT_QTL_RESULTS(stage3Directories, workflowBin)
 }
 
-workflow {
-    if (params.help) {
+workflow FULL_PIPELINE {
+    def runQtl = booleanParam('run_qtl', params.run_qtl)
+    if (booleanParam('help', params.help)) {
         log.info usageText()
         return
     }
@@ -340,7 +583,7 @@ workflow {
     if (params.min_cluster_genes as Integer > params.max_cluster_genes as Integer) {
         error 'min_cluster_genes cannot exceed max_cluster_genes'
     }
-    if (params.run_qtl) requireGenotypePrefix(params.genotype_prefix)
+    if (runQtl) requireGenotypePrefix(params.genotype_prefix)
 
     inputFile = file(params.input, checkIfExists: true)
     annotation = channel.value(file(params.gene_annotation, checkIfExists: true))
@@ -382,7 +625,7 @@ workflow {
     pcaDirectories = RUN_CLUSTER_PCA.out.pca.map { _celltype, pcaDir -> pcaDir }.collect()
     COLLECT_QTL_TASKS(pcaDirectories, workflowBin)
 
-    if (params.run_qtl) {
+    if (runQtl) {
         genotypeBeds = (1..22).collect { chr -> file(params.genotype_prefix.replace('{chr}', chr.toString()) + '.bed', checkIfExists: true) }
         genotypeBims = (1..22).collect { chr -> file(params.genotype_prefix.replace('{chr}', chr.toString()) + '.bim', checkIfExists: true) }
         genotypeFams = (1..22).collect { chr -> file(params.genotype_prefix.replace('{chr}', chr.toString()) + '.fam', checkIfExists: true) }
@@ -454,5 +697,25 @@ workflow {
         RUN_SAIGE_STEP3(step3Inputs, workflowBin)
         qtlResults = RUN_SAIGE_STEP3.out.result.map { _taskId, _celltype, directory -> directory }.collect()
         COLLECT_QTL_RESULTS(qtlResults, workflowBin)
+    }
+}
+
+workflow {
+    if (params.execution_stage == 'default') {
+        FULL_PIPELINE()
+    } else if (params.execution_stage == 'upstream_step1') {
+        UPSTREAM_STEP1()
+    } else if (params.execution_stage == 'upstream_step2') {
+        UPSTREAM_STEP2()
+    } else if (params.execution_stage == 'upstream_step3') {
+        UPSTREAM_STEP3()
+    } else if (params.execution_stage == 'saige_step1') {
+        SAIGE_STEP1()
+    } else if (params.execution_stage == 'saige_step2') {
+        SAIGE_STEP2()
+    } else if (params.execution_stage == 'saige_step3') {
+        SAIGE_STEP3()
+    } else {
+        error "Unsupported --execution_stage: ${params.execution_stage}"
     }
 }

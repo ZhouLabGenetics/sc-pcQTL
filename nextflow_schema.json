@@ -23,6 +23,14 @@
     {
       "required": ["step2_manifest"],
       "properties": {"step2_manifest": {"type": "string"}}
+    },
+    {
+      "required": ["upstream_step1_manifest"],
+      "properties": {"upstream_step1_manifest": {"type": "string"}}
+    },
+    {
+      "required": ["upstream_step2_manifest"],
+      "properties": {"upstream_step2_manifest": {"type": "string"}}
     }
   ],
   "properties": {
@@ -35,6 +43,8 @@
     "qtl_manifest": {"type": ["string", "null"], "format": "file-path", "description": "Cluster-PC task manifest for standalone SAIGE-QTL step 1"},
     "step1_manifest": {"type": ["string", "null"], "format": "file-path", "description": "Completed step 1 manifest for standalone SAIGE-QTL step 2"},
     "step2_manifest": {"type": ["string", "null"], "format": "file-path", "description": "Completed step 2 manifest for standalone SAIGE-QTL step 3"},
+    "upstream_step1_manifest": {"type": ["string", "null"], "format": "file-path", "description": "Completed preparation and pair-screen manifest for upstream step 2"},
+    "upstream_step2_manifest": {"type": ["string", "null"], "format": "file-path", "description": "Completed cluster manifest for upstream step 3"},
     "outdir": {"type": "string", "default": "results"},
     "genome_build": {"type": "string", "default": "GRCh38"},
     "donor_col": {"type": "string", "default": "individual"},
@@ -64,8 +74,10 @@
     "qtl_fdr": {"type": "number", "exclusiveMinimum": 0, "maximum": 1, "default": 0.05},
     "allow_unknown_saige_params": {"type": "boolean", "default": false},
     "run_qtl": {"type": "boolean", "default": true},
-    "execution_name": {"type": "string", "enum": ["", "saige_step1", "saige_step2", "saige_step3"], "default": ""},
+    "execution_stage": {"type": "string", "enum": ["default", "upstream_step1", "upstream_step2", "upstream_step3", "saige_step1", "saige_step2", "saige_step3"], "default": "default"},
+    "execution_name": {"type": "string", "enum": ["", "upstream_step1", "upstream_step2", "upstream_step3", "saige_step1", "saige_step2", "saige_step3"], "default": ""},
     "publish_saige_intermediates": {"type": "boolean", "default": false},
+    "publish_upstream_intermediates": {"type": "boolean", "default": false},
     "save_directional_tests": {"type": "boolean", "default": false},
     "vr_n_markers": {"type": "integer", "minimum": 1, "default": 10000},
     "vr_seed": {"type": "integer", "minimum": 0, "default": 1},
