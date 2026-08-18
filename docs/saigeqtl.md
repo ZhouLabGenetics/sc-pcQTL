@@ -7,6 +7,10 @@ large datasets, the same work can be divided into three independently
 resumable batch runs. Every command processes all rows in its input manifest;
 users do not need to launch one command per phenotype.
 
+For Slurm resource configuration, concurrency limits, scheduler chaining,
+monitoring, and recovery, see the
+[large-scale and HPC batch guide](large-scale.md).
+
 First construct cluster-PC phenotypes without running QTL association tests:
 
 ```bash

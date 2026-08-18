@@ -163,3 +163,6 @@ For large QTL scans, `sc-pcqtl saige step1`, `step2`, and `step3` divide the
 SAIGE-QTL work into three manifest-driven runs without changing the statistical
 settings or final output tables. Complete commands and the external phenotype
 manifest schema are provided in [SAIGE-QTL execution](saigeqtl.md).
+Resource profiles, scheduler submission patterns, concurrency controls, and
+recovery procedures are covered in the dedicated
+[large-scale and HPC batch guide](large-scale.md).

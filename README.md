@@ -104,6 +104,8 @@ SAIGE-QTL can optionally be submitted as three independent batch stages with
 `sc-pcqtl saige step1`, `step2`, and `step3`. This is useful when null-model
 fitting, association testing, and regional aggregation require separate HPC
 allocations. See the [complete staged execution guide](docs/saigeqtl.md).
+For scheduler configuration, concurrency limits, recovery, and large-cohort
+batch patterns, see [large-scale and HPC execution](docs/large-scale.md).
 
 ## Statistical Modes
 
@@ -124,6 +126,7 @@ within-chromosome autosomal pairs among filtered genes.
 
 - [Installation](docs/installation.md)
 - [Inputs and execution](docs/usage.md)
+- [Large-scale and HPC batch execution](docs/large-scale.md)
 - [Parameters](docs/parameters.md)
 - [Method definitions](docs/methods.md)
 - [SAIGE-QTL execution and customization](docs/saigeqtl.md)
