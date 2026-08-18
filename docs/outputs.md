@@ -102,3 +102,6 @@ the report, trace, timeline, or metadata from another stage.
 
 Independent upstream stages likewise use `pipeline_info/upstream_step1/`,
 `pipeline_info/upstream_step2/`, and `pipeline_info/upstream_step3/`.
+
+See [Advanced staged execution](staged-execution.md) for the commands and
+manifest dependencies that produce these additional outputs.

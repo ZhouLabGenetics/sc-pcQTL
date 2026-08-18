@@ -88,7 +88,7 @@ line or in a Nextflow parameter file.
 
 These manifest parameters are not used by the standard `sc-pcqtl run`
 command. They are inputs to the advanced stage subcommands documented in the
-[large-scale and staged execution guide](large-scale.md).
+[staged-execution guide](staged-execution.md).
 
 | Parameter | Default | Advanced use |
 |---|---:|---|
@@ -101,5 +101,5 @@ command. They are inputs to the advanced stage subcommands documented in the
 The launcher manages internal stage-selection and intermediate-publication
 parameters. Users should invoke staged runs through `sc-pcqtl upstream` or
 `sc-pcqtl saige`, rather than setting those internal parameters directly. See
-[advanced large-scale and staged execution](large-scale.md) and
+[advanced staged execution](staged-execution.md) and
 [SAIGE-QTL execution](saigeqtl.md).

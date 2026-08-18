@@ -169,8 +169,8 @@ nextflow run ZhouLabGenetics/sc-pcQTL -profile apptainer,slurm \
 
 Do not edit the workflow's committed profiles for a single installation.
 
-Manifest-driven step-by-step execution is a separate advanced mode intended
-for unusually large analyses or scheduler policies that cannot accommodate a
-single Nextflow driver. Its commands, dependencies, resource controls, and
-recovery procedures are documented only in the
-[advanced large-scale and staged execution guide](large-scale.md).
+For a complete workflow submitted through Slurm or SGE/UGE, see
+[large-scale and HPC execution](large-scale.md). Manifest-driven step-by-step
+execution is a separate advanced mode intended for scheduler policies that
+cannot accommodate a single Nextflow driver or require explicit checkpoints;
+see [staged execution](staged-execution.md).

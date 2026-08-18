@@ -101,9 +101,10 @@ Direct `nextflow run` commands remain supported for advanced and institutional
 deployments.
 
 `sc-pcqtl run` is the recommended interface and executes the complete workflow
-with internal parallelism. Advanced users who require separate scheduler
-allocations or manifest checkpoints should use the distinctly documented
-[large-scale and staged execution guide](docs/large-scale.md).
+with internal parallelism. Running the complete workflow on a scheduler is
+covered in [large-scale and HPC execution](docs/large-scale.md). Users who
+specifically require separate driver submissions or manifest checkpoints
+should instead follow [staged execution](docs/staged-execution.md).
 
 ## Statistical Modes
 
@@ -129,7 +130,8 @@ within-chromosome autosomal pairs among filtered genes.
 - [SAIGE-QTL execution and customization](docs/saigeqtl.md)
 - [Outputs](docs/outputs.md)
 - [Troubleshooting](docs/troubleshooting.md)
-- [Advanced: large-scale and staged execution](docs/large-scale.md)
+- [Advanced: large-scale and HPC execution](docs/large-scale.md)
+- [Advanced: staged execution](docs/staged-execution.md)
 
 ## Citation
 

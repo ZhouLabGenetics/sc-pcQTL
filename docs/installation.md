@@ -131,6 +131,10 @@ comma, or colon; unset `TMPDIR` falls back to `/tmp`. On schedulers that create
 node-local scratch only after allocation, launch Nextflow inside the allocation
 or set `TMPDIR` to a stable path visible on compute nodes before launching.
 
+Resource profiles, shared-storage layout, concurrency, and recovery for the
+standard complete workflow are described in
+[Large-scale and HPC execution](large-scale.md).
+
 ### Windows
 
 Use Windows Subsystem for Linux 2 (WSL2), install Docker Desktop with WSL

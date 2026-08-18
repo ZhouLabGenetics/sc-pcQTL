@@ -48,8 +48,8 @@ Advanced: run the upstream analysis as three independently resumable stages:
 Step 1 prepares each cell type and runs the parallel hurdle pair screen. Step 2
 calls local gene clusters. Step 3 constructs cluster-PC phenotypes and writes
 the standard phenotypes/qtl_tasks.tsv manifest. All stages accept --outdir and
-ordinary Nextflow options. See docs/large-scale.md for the complete staged
-workflow and production guidance.
+ordinary Nextflow options. See docs/staged-execution.md for the complete staged
+workflow.
 EOF
 }
 
@@ -63,7 +63,8 @@ Advanced: run SAIGE-QTL as independently resumable batch stages:
 
 All stages accept --outdir and ordinary Nextflow options. Step 1 resolves the
 SAIGE-QTL parameter table once; later stages inherit it through their input
-manifest. See docs/saigeqtl.md for complete examples.
+manifest. See docs/staged-execution.md for the complete staged workflow and
+docs/saigeqtl.md for parameter customization.
 EOF
 }
 

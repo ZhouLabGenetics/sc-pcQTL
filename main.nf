@@ -74,8 +74,9 @@ Core options:
   --saige_params PATH        Optional step,parameter,value override table
   --outdir PATH              Output directory (default: results)
 
-The standard interface runs the complete workflow in one command. Advanced
-manifest-driven and HPC execution is documented in docs/large-scale.md.
+The standard interface runs the complete workflow in one command. Advanced HPC
+and staged execution are documented separately in docs/large-scale.md and
+docs/staged-execution.md.
 
 Documentation: https://github.com/ZhouLabGenetics/sc-pcQTL
 '''.stripIndent()
