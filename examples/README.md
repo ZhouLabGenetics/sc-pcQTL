@@ -6,25 +6,6 @@ release with simulated covariates and single-cell expression. The example is
 designed to exercise every workflow stage through SAIGE-QTL; it is not a
 method-performance benchmark.
 
-## Design
-
-- One simulated immune cell type, `sim_immune`.
-- 503 unrelated European-ancestry 1000 Genomes donors.
-- 12,000 simulated cells and 40 simulated genes on chromosome 22.
-- Five local co-expression modules separated by more than 5 Mb: three
-  two-gene modules, one four-gene module, and one five-gene module.
-- Four modules carry an implanted cis genetic effect; the fifth is a
-  co-expressed negative control without a genetic effect.
-- Detection is generated separately from zero-truncated Poisson positive
-  counts, with library size, donor covariates, donor effects, cell-level
-  factors, and module-specific genotype effects.
-
-The genotype source is the 1000 Genomes Project high-coverage 30x phased
-GRCh38 call set described by Byrska-Bishop et al. (Cell, 2022). Chromosomes
-1-21 contain compact LD-pruned background panels. Chromosome 22 additionally
-contains dense local panels around the five simulated modules. The original
-sample identifiers and alleles are retained.
-
 ## Files
 
 | Path | Content |
@@ -81,3 +62,22 @@ storage, and emulation.
 
 The maintainer-only data generator is isolated under `dev/example-data/` and
 is not called during a normal workflow run.
+
+## Dataset design and provenance
+
+- One simulated immune cell type, `sim_immune`.
+- 503 unrelated European-ancestry 1000 Genomes donors.
+- 12,000 simulated cells and 40 simulated genes on chromosome 22.
+- Five local co-expression modules separated by more than 5 Mb: three
+  two-gene modules, one four-gene module, and one five-gene module.
+- Four modules carry an implanted cis genetic effect; the fifth is a
+  co-expressed negative control without a genetic effect.
+- Detection is generated separately from zero-truncated Poisson positive
+  counts, with library size, donor covariates, donor effects, cell-level
+  factors, and module-specific genotype effects.
+
+The genotype source is the 1000 Genomes Project high-coverage 30x phased
+GRCh38 call set described by Byrska-Bishop et al. (Cell, 2022). Chromosomes
+1-21 contain compact LD-pruned background panels. Chromosome 22 additionally
+contains dense local panels around the five simulated modules. The original
+sample identifiers and alleles are retained.
