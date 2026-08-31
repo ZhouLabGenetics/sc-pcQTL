@@ -1,5 +1,9 @@
 # sc-pcQTL
 
+<p align="center">
+  <img src="docs/assets/sc-pcQTL-concept-logo.png" alt="sc-pcQTL concept logo" width="600">
+</p>
+
 [![CI](https://github.com/ZhouLabGenetics/sc-pcQTL/actions/workflows/ci.yml/badge.svg)](https://github.com/ZhouLabGenetics/sc-pcQTL/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Nextflow](https://img.shields.io/badge/Nextflow-25.10.0%2B-23aa62.svg)](https://www.nextflow.io/)
