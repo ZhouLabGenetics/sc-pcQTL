@@ -1,7 +1,7 @@
 # sc-pcQTL
 
 <p align="center">
-  <img src="docs/assets/sc-pcQTL-concept-logo.png" alt="sc-pcQTL concept logo" width="600">
+  <img src="docs/assets/sc-pcQTL-concept-logo.png" alt="sc-pcQTL concept logo" width="420">
 </p>
 
 [![CI](https://github.com/ZhouLabGenetics/sc-pcQTL/actions/workflows/ci.yml/badge.svg)](https://github.com/ZhouLabGenetics/sc-pcQTL/actions/workflows/ci.yml)
